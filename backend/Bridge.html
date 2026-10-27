@@ -1,0 +1,5 @@
+<!doctype html><html><head><base target="_top"></head><body><script>
+const origin=<?!= JSON.stringify(siteOrigin) ?>,channel=<?!= JSON.stringify(channel) ?>;
+window.addEventListener('message',e=>{const r=e.data;if(e.origin!==origin||e.source!==window.top||!r||r.type!=='NPT2_REQUEST'||r.channel!==channel||typeof r.id!=='string')return;const send=(ok,data)=>window.top.postMessage({type:'NPT2_RESPONSE',channel,id:r.id,ok,...(ok?{data}:{error:String(data)})},origin);google.script.run.withSuccessHandler(d=>send(true,d)).withFailureHandler(e=>send(false,e.message)).api({action:r.action,data:r.data,session:r.session});});
+window.top.postMessage({type:'NPT2_READY',channel},origin);
+</script></body></html>
