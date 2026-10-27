@@ -141,3 +141,22 @@ https://developers.google.com/identity/oauth2/web/guides/use-code-model
 https://developers.google.com/identity/protocols/oauth2/web-server
 https://developers.google.com/apps-script/guides/html/communication
 https://developers.google.com/apps-script/guides/services/quotas
+
+## โฟลเดอร์เนื้อหาที่ผู้ใช้กำหนด (27 ต.ค. 2569)
+
+- แบนเนอร์: https://drive.google.com/drive/folders/1qcdLbbSm_iqjq9pS1t8nwKhRf5T98mvX
+- ข่าวประชาสัมพันธ์: https://drive.google.com/drive/folders/1NcwDztc1GVXGrE_pOV1DfagpbnoTPS9r
+- ข่าวเตือนภัย: https://drive.google.com/drive/folders/12tPWpOi6eESO-oub_2Cx_kF07sYsM3qj
+
+backend/Code.gs กำหนด CONTENT_FOLDERS_ ให้ตรงสามโฟลเดอร์นี้แล้ว เจ้าของ deployment ต้องมีสิทธิ์อ่าน/เขียนโฟลเดอร์เหล่านี้ ไม่ต้องเปิดแชร์สาธารณะหรือให้เจ้าหน้าที่เห็น Drive
+เมื่อ Apps Script deploy และ config.js เชื่อมสำเร็จ ระบบอ่านรูป JPG PNG WebP และ PDF โดยตรงจากโฟลเดอร์ (แบนเนอร์รับรูปเท่านั้น) ใช้ชื่อไฟล์เป็นหัวข้อและคำอธิบายไฟล์เป็นรายละเอียด ชื่อมีเลขนำหน้าใช้เรียงลำดับ
+ไฟล์ที่วางโดยตรงในสามโฟลเดอร์นี้ถือเป็นเนื้อหาที่อนุญาตเผยแพร่หน้าเว็บ ต้องไม่วางคำร้อง/หลักฐานส่วนตัวในโฟลเดอร์ข่าว
+ไฟล์จากการอัปโหลดผ่านหน้าเจ้าหน้าที่จะลงโฟลเดอร์ตรงส่วนงาน และยังใช้สถานะฉบับร่าง/เผยแพร่ตามที่บันทึกในชีต
+แก้/ลบรายการที่อ่านมาจากโฟลเดอร์ได้ตามสิทธิ์ การลบซ่อนจากเว็บ ไม่ลบไฟล์ต้นฉบับใน Drive และไม่เปลี่ยนการแชร์
+ระบบสร้าง NPT2_SourceState เมื่อจำเป็นเพื่อกันไฟล์เก่ากลับมาแสดงซ้ำหลังเปลี่ยนรูป
+การเปลี่ยนโฟลเดอร์/สคริปต์บน GitHub ไม่ได้อัปเดต Apps Script ที่ deploy อยู่ ต้องวางโค้ดหลังบ้านใหม่และ Deploy new version ด้วย
+
+## เลย์เอาต์และการโหลดไฟล์
+หน้าแรกแสดงแบนเนอร์ ข่าว และเตือนภัย ส่วนร้องเรียน/ติดตาม/เกี่ยวกับเราแสดงเมื่อกดเมนู ใช้เมนูหลัก 5 หัวข้อตามภาพอ้างอิง
+main และส่วนข่าวขยายเต็ม viewport ใช้ช่องไฟที่ปรับตามขนาดจอ เมนูมือถือพับเป็นปุ่ม รองรับ portrait/landscape และไม่มี maximum-scale ที่ปิดการซูม
+HTML อ้าง CSS/JS ด้วยเวอร์ชัน query เพื่อป้องกันเบราว์เซอร์แสดง HTML ใหม่ร่วมกับ CSS เก่าที่ cache ไว้
