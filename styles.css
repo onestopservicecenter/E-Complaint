@@ -18,3 +18,27 @@ html,body{width:100%;min-width:0}body{overflow-wrap:break-word}main,.services-ma
 
 /* Drive images own the main banner; never overlay generated headings. */
 #bannerSection.feature-banner{margin:0;width:100%;border-radius:0;background:#f3f8ff;min-height:0}#bannerSection .published-banner img{display:block;width:100%;height:auto;max-height:none;object-fit:contain}#bannerSection .slide-controls{background:#075695;color:white;justify-content:center;padding:4px 12px;gap:15px}#bannerSection .slide-controls button{background:transparent;color:white;line-height:1.2}#bannerSection:not(:has(.published-banner)) .slide-controls{display:none}#bannerSection:not(:has(.published-banner:not(.hidden)~.published-banner)):has(.published-banner:only-child) .slide-controls{display:none}#bannerStatus{margin:0;text-align:center;padding:40px 20px;color:#174c7b}#bannerStatus[hidden]{display:none}
+
+
+/* Larger public infographics, preserving the complete image. */
+#newsCards.news-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;align-items:start}
+#newsCards:has(>.news-card:only-child){grid-template-columns:minmax(0,1000px);justify-content:center}
+#newsCards .news-card,#alertCards .news-card{padding:18px;min-width:0}
+#newsCards .news-card img,#alertCards .news-card img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;background:white;border-radius:4px}
+#newsCards .news-card img[hidden],#alertCards .news-card img[hidden]{display:none}
+#alertCards.alert-grid{display:flex;align-items:flex-start;gap:32px;scroll-snap-type:x proximity;padding:4px 4px 18px}
+#alertCards.alert-grid>.news-card{flex:0 0 min(1000px,85vw);scroll-snap-align:center}
+#alertCards.alert-grid>.news-card:only-child{flex:0 1 1000px;width:100%;margin-left:auto;margin-right:auto}
+.news-card .news-image-button{display:block;width:100%;padding:0;margin:0 0 16px;border:0;border-radius:4px;background:#fff;cursor:zoom-in;color:inherit}
+.news-card .news-image-button:focus-visible{outline:3px solid #0780d0;outline-offset:4px}
+#newsCards .news-card h3,#alertCards .news-card h3{font-size:clamp(20px,1.5vw,28px);line-height:1.55;margin:12px 0}
+#newsCards .news-card>button:not(.news-image-button),#alertCards .news-card>button:not(.news-image-button){display:inline-block;margin-top:14px;padding:12px 22px;background:#0765af;color:white;font-size:18px;border-radius:7px}
+#article{width:calc(100vw - 32px);max-width:1440px;height:94vh;height:94dvh;max-height:none;padding:18px;border-radius:12px;overflow:hidden}
+#article[open]{display:flex;flex-direction:column;gap:10px}
+#article>.close-dialog{align-self:flex-end;padding:9px 20px;flex:none}
+#articleBody{display:flex;flex:1;min-height:0;flex-direction:column;gap:12px;overflow:auto}
+#articleBody>h2{margin:0;color:#07518b;font-size:clamp(20px,2vw,30px);line-height:1.45;flex:none}
+.document-tools{display:flex;flex-wrap:wrap;gap:10px;flex:none}
+.document-tools .button{padding:9px 16px;background:#0765af;color:white;font-size:15px}
+.document-pdf{display:block;width:100%;flex:1;min-height:300px;border:1px solid #cbdceb;background:#e8edf3;border-radius:6px}
+@media(max-width:760px){#newsCards.news-grid{grid-template-columns:minmax(0,1fr);gap:22px}#newsCards .news-card,#alertCards .news-card{padding:12px}#alertCards.alert-grid>.news-card{flex-basis:94%}#article{width:calc(100vw - 12px);height:96vh;height:96dvh;padding:10px}.document-tools .button{font-size:14px;padding:8px 12px}.document-pdf{min-height:220px}}

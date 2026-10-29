@@ -6,3 +6,12 @@ windowEvents.message({origin:'https://evil.example',source:win,data:{type:'NPT2_
 windowEvents.message({origin:'https://demo-script.googleusercontent.com',source:win,data:{type:'NPT2_READY',channel:'wrong'}});assert.equal(vm.runInContext('bridgeReady',context),false);
 windowEvents.message({origin:'https://demo-script.googleusercontent.com',source:win,data:{type:'NPT2_READY',channel}});assert.equal(vm.runInContext('bridgeReady',context),true);cfg.webAppUrl='https://script.google.com/macros/s/TEST/exec';const pending=vm.runInContext("api('catalog')",context);const packet=win.sent.at(-1);assert.equal(packet.o,'https://demo-script.googleusercontent.com');windowEvents.message({origin:packet.o,source:win,data:{type:'NPT2_RESPONSE',channel,id:packet.m.id,ok:true,data:{items:[]}}});pending.then(x=>{assert.equal(x.items.length,0);console.log('PASS: public wording, reference page hierarchy without extra steps/categories, random channel, bridge origin and nonce validation, matching response routing')}).catch(e=>{console.error(e);process.exitCode=1});
 
+
+
+assert.equal(context.contentTitle({title:'1'}),'');assert.equal(context.contentTitle({title:'01.png'}),'');assert.equal(context.contentTitle({title:'เฝ้าระวังผลิตภัณฑ์เสริมอาหารโคเรีย เพียว'}),'เฝ้าระวังผลิตภัณฑ์เสริมอาหารโคเรีย เพียว');assert(html.includes('public-document.js'));
+
+E.prototype.showModal=function(){this.open=true};E.prototype.remove=function(){};
+const nativeCreate=context.document.createElement;context.document.createElement=tag=>{const e=nativeCreate();e.tag=tag;return e};
+context.window.PublicDocumentPdf={fromPayload:async()=>new Blob(['%PDF-1.4'],{type:'application/pdf'})};
+context.api=async(action,data)=>{assert.equal(action,'publicFile');return {name:'1.png',mime:'image/png',base64:'AA=='}};
+(async()=>{await context.openPublicDocument({fileId:'public-id',updatedAt:'v1',type:'alert',title:'1'});const children=ids.get('#articleBody').children;assert.equal(children[0].textContent,'ข่าวเตือนภัย');const frame=children.find(e=>e.tag==='iframe');assert(frame&&frame.src.startsWith('blob:'),'read more opens PDF immediately');assert(!children.some(e=>e.textContent==='เปิดไฟล์ประกอบ'));console.log('PASS: numeric-only titles hidden, human titles preserved, read-more opens PDF without a second attachment button')})().catch(e=>{console.error(e);process.exitCode=1});
