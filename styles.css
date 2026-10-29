@@ -34,3 +34,11 @@ html,body{width:100%;min-width:0}body{overflow-wrap:break-word}main,.services-ma
 .news-card .read-more-button{display:inline-block;margin-top:12px;padding:10px 20px;background:#0765af;color:white;font-size:16px;border-radius:7px;line-height:1.5}
 .news-card .read-more-button:hover{background:#054b86}
 @media(max-width:760px){#newsCards.news-grid{grid-template-columns:minmax(0,460px);gap:20px}#newsCards .news-card,#alertCards .news-card{padding:12px}#newsCards .news-card img,#alertCards .news-card img{height:440px;max-height:65vh}#alertCards.alert-grid>.news-card{flex-basis:92%}}
+
+/* Contact details supplied by the agency. */
+#contactSection.contact-footer{background:#f3faf7;color:#15545c;border-top:5px solid #20c4df;padding:28px clamp(16px,3vw,64px)}
+.contact-card{display:grid;grid-template-columns:1.7fr 1fr 1.05fr;background:#fff;border:1px solid #d6e7e3;border-radius:20px;box-shadow:0 12px 32px #13594d0c;overflow:hidden;text-align:left}
+.contact-card>div{padding:24px;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.contact-card>div+div{border-left:1px solid #dce9e7}
+.contact-card strong{font-size:18px}.contact-card p{margin:5px 0 0;font-size:15px}.contact-label{font-size:13px;color:#718e90;font-weight:bold}.contact-phones,.contact-email{font-size:16px;font-weight:bold}.contact-card a{color:#075d67;overflow-wrap:anywhere}.contact-card a:hover{text-decoration:underline}.contact-extra:empty{display:none}.contact-extra{margin:15px 0 0}
+@media(max-width:760px){.contact-card{grid-template-columns:1fr}.contact-card>div{padding:20px}.contact-card>div+div{border-left:0;border-top:1px solid #dce9e7}.contact-card strong{font-size:17px}}

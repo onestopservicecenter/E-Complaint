@@ -45,6 +45,12 @@ const newVersion=context.imageFor('cached-news',new E(),false,'v4');assert.equal
 saved.set('malformed',JSON.stringify({at:Date.now(),data:null}));assert.equal(Object.keys(context.readPublicCache('malformed')).length,0);
 let catalogs=0,release;context.api=()=>{catalogs++;return new Promise(r=>release=r)};
 const a=context.loadContent(),b=context.loadContent();assert.equal(catalogs,1,'content checks never overlap');release({items:[]});await Promise.all([a,b]);
+const persistent=new Map();context.localStorage={getItem:k=>persistent.get(k)||null,setItem:(k,v)=>persistent.set(k,v),removeItem:k=>persistent.delete(k)};
+context.writePublicStorage('cross-tab',JSON.stringify({at:Date.now(),data:{news:[previewItem]}}));
+assert.equal(persistent.has('cross-tab'),true,'public cache is persistent across tabs');assert.equal(context.readPublicCache('cross-tab').news[0].fileId,'cached-news');
+context.removePublicStorage('cross-tab');assert.equal(persistent.has('cross-tab'),false);
+context.localStorage={getItem(){throw Error('disabled')},setItem(){throw Error('disabled')},removeItem(){throw Error('disabled')}};
+context.writePublicStorage('fallback','ok');assert.equal(context.readPublicStorage('fallback'),'ok');context.removePublicStorage('fallback');assert.equal(context.readPublicStorage('fallback'),null);
 console.log('PASS: first-image priority, no empty image insertion, version cache, unchanged DOM, outages, failed replacement, retry, tab restore, deletion, request deduplication, payload validation, overlapping refresh');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

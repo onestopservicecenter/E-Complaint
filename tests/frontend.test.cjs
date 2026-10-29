@@ -27,3 +27,5 @@ for(const [id,item] of [['#newsCards',news],['#alertCards',alert]]){
 assert.equal(context.contentFileUrl({fileId:'bad/id',link:'javascript:alert(1)'}),'');
 context.renderPublicCards('news',[]);assert.equal(vm.runInContext('savedCards.news.length',context),0);
 console.log('PASS: balanced previews link directly to distinct Drive originals, image and PDF links, numeric titles hidden, human names preserved, confirmed deletion clears card cache');
+
+assert(html.includes('fdapv73@fda.moph.go.th'));assert(html.includes('0 3424 3620 - 22'));assert(html.includes('ต่อ 124 หรือ 230'));
