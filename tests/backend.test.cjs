@@ -2,8 +2,8 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=r
 class Range{constructor(s,r,c,n=1,m=1){Object.assign(this,{s,r,c,n,m})}getValues(){return Array.from({length:this.n},(_,i)=>Array.from({length:this.m},(_,j)=>this.s.data[this.r+i-1]?.[this.c+j-1]??''))}setValues(rows){rows.forEach((r,i)=>{this.s.data[this.r+i-1]??=[];r.forEach((v,j)=>this.s.data[this.r+i-1][this.c+j-1]=typeof v==='string'&&v.startsWith("'")?v.slice(1):v)});return this}}
 class Sheet{constructor(n){this.name=n;this.data=[]}getLastRow(){return this.data.length}getDataRange(){return new Range(this,1,1,this.data.length,Math.max(1,...this.data.map(r=>r.length)))}getRange(...a){return new Range(this,...a)}appendRow(r){this.data.push(r.map(v=>typeof v==='string'&&v.startsWith("'")?v.slice(1):v))}setFrozenRows(){}}
 const sheets=[],props=new Map(),cache=new Map(),files=new Map(),folders=new Map();const ss={getId:()=> 'test-sheet',getSheetByName:n=>sheets.find(s=>s.name===n),insertSheet:n=>{const s=new Sheet(n);sheets.push(s);return s}};
-const blob=(bytes,mime,name)=>({getBytes:()=>bytes,getContentType:()=>mime,getName:()=>name});function folder(){const id=crypto.randomUUID();const f={getId:()=>id,createFolder:folder,getFiles:()=>{const arr=[...files.values()].filter(x=>x.folderId===id);let i=0;return {hasNext:()=>i<arr.length,next:()=>arr[i++]};},createFile:b=>{const fileId=crypto.randomUUID();const x={folderId:id,getDescription:()=>'',getLastUpdated:()=>new Date(),getId:()=>fileId,getName:()=>b.getName(),getBlob:()=>b,getThumbnail:()=>null,getMimeType:()=>b.getContentType(),getSize:()=>b.getBytes().length,isTrashed:()=>false,setTrashed:()=>files.delete(fileId)};files.set(fileId,x);return x}};folders.set(id,f);return f}
-let identity={sub:'owner-sub',email:'owner@gmail.com',email_verified:true,name:'Owner'};const ctx={console,Date,JSON,Array,Math,Number,String,Set,Error,Session:{getActiveUser:()=>({getEmail:()=> 'owner@gmail.com'}),getEffectiveUser:()=>({getEmail:()=> 'owner@gmail.com'})},SpreadsheetApp:{getActiveSpreadsheet:()=>ss,openById:()=>ss},PropertiesService:{getScriptProperties:()=>({getProperty:k=>props.get(k),setProperty:(k,v)=>props.set(k,v)})},CacheService:{getScriptCache:()=>({get:k=>cache.get(k),put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},Utilities:{getUuid:()=>crypto.randomUUID(),computeDigest:(_,s)=>[...crypto.createHash('sha256').update(s).digest()],DigestAlgorithm:{SHA_256:'SHA256'},formatDate:()=> '20261027',base64Decode:s=>[...Buffer.from(s,'base64')],base64Encode:b=>Buffer.from(b).toString('base64'),newBlob:blob},DriveApp:{createFolder:folder,getFolderById:id=>folders.get(id),getFileById:id=>{if(!files.has(id))throw Error('not found');return files.get(id)}},UrlFetchApp:{fetch:(url,o)=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify(url.includes('/token')?{access_token:'google-token'}:identity)})}};
+const blob=(bytes,mime,name)=>({getBytes:()=>bytes,getContentType:()=>mime,getName:()=>name});function folder(){const id=crypto.randomUUID();const f={getId:()=>id,createFolder:folder,getFiles:()=>{const arr=[...files.values()].filter(x=>x.folderId===id);let i=0;return {hasNext:()=>i<arr.length,next:()=>arr[i++]};},createFile:b=>{const fileId=crypto.randomUUID();const x={folderId:id,getDescription:()=>'',getLastUpdated:()=>new Date(),getId:()=>fileId,getName:()=>b.getName(),getBlob:()=>b,getThumbnail:()=>null,getMimeType:()=>b.getContentType(),getSize:()=>b.getBytes().length,isTrashed:()=>false,setTrashed:()=>files.delete(fileId)};x.getParents=()=>{const a=[...folders.entries()].filter(([key,value])=>value.getId()===x.folderId).map(([key])=>({getId:()=>key}));let i=0;return {hasNext:()=>i<a.length,next:()=>a[i++]}};files.set(fileId,x);return x}};folders.set(id,f);return f}
+let identity={sub:'owner-sub',email:'owner@gmail.com',email_verified:true,name:'Owner'};const ctx={console,Date,JSON,Array,Math,Number,String,Set,Error,Session:{getActiveUser:()=>({getEmail:()=> 'owner@gmail.com'}),getEffectiveUser:()=>({getEmail:()=> 'owner@gmail.com'})},SpreadsheetApp:{getActiveSpreadsheet:()=>ss,openById:()=>ss},PropertiesService:{getScriptProperties:()=>({getProperty:k=>props.get(k),setProperty:(k,v)=>props.set(k,v)})},CacheService:{getScriptCache:()=>({get:k=>cache.get(k),put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},Utilities:{getUuid:()=>crypto.randomUUID(),computeDigest:(_,s)=>[...crypto.createHash('sha256').update(s).digest()],DigestAlgorithm:{SHA_256:'SHA256'},formatDate:(date,zone,format)=>{const v=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date).map(x=>[x.type,x.value]));return format==='yyyy-MM-dd'?v.year+'-'+v.month+'-'+v.day:v.year+v.month+v.day},base64Decode:s=>[...Buffer.from(s,'base64')],base64Encode:b=>Buffer.from(b).toString('base64'),newBlob:blob},DriveApp:{createFolder:folder,getFolderById:id=>folders.get(id),getFileById:id=>{if(!files.has(id))throw Error('not found');return files.get(id)}},UrlFetchApp:{fetch:(url,o)=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify(url.includes('/token')?{access_token:'google-token'}:identity)})}};
 ['1qcdLbbSm_iqjq9pS1t8nwKhRf5T98mvX','1NcwDztc1GVXGrE_pOV1DfagpbnoTPS9r','12tPWpOi6eESO-oub_2Cx_kF07sYsM3qj'].forEach(id=>folders.set(id,folder()));vm.createContext(ctx);vm.runInContext(fs.readFileSync(fs.existsSync(path.join(__dirname,'../backend/Code.gs'))?path.join(__dirname,'../backend/Code.gs'):path.join(__dirname,'../apps-script/Code.gs'),'utf8'),ctx);ctx.initializeV2();const call=(session,action,data={})=>ctx.api({session,action,data});function login(i){identity=i;const browserKey=crypto.randomUUID()+crypto.randomUUID(),begin=call('','beginLogin',{browserKey});return call('','completeLogin',{state:begin.state,browserKey,code:'one-time-google-code'})}
 const admin=login(identity);assert.equal(admin.user.role,'admin');assert.throws(()=>call('','myCases'),/เข้าสู่ระบบ/);call(admin.session,'saveSiteSettings',{contact:'ติดต่อเจ้าหน้าที่ทดสอบ',privacyText:'ประกาศความเป็นส่วนตัวสำหรับการทดสอบ'});
 const citizen=login({sub:'citizen-a',email:'citizen@gmail.com',email_verified:true,name:'A'}),other=login({sub:'citizen-b',email:'other@gmail.com',email_verified:true,name:'B'});const png={name:'image.png',base64:Buffer.from([137,80,78,71,13,10,26,10,0]).toString('base64')};const body={requestId:crypto.randomUUID(),category:'อาหาร',subject:'ทดสอบอาหาร',details:'รายละเอียดเหตุการณ์สำหรับทดสอบระบบร้องเรียน',location:'สถานที่ทดสอบ',name:'ผู้ร้อง',phone:'0800000000',acknowledge:true,files:[png],ownerSub:'citizen-b',email:'other@gmail.com'};
@@ -39,3 +39,48 @@ largeNews.getThumbnail=()=>null;assert.throws(()=>call('','publicImage',{id:larg
 largeAlert.getSize=()=>20971521;assert.throws(()=>call('','publicFile',{id:largeAlert.getId()}),/เกินขนาด/);
 largeAlert.getThumbnail=()=>blob(pngBytes,'text/html','bad.html');assert.throws(()=>call('','publicImage',{id:largeAlert.getId()}),/ชนิดไฟล์/);
 console.log('PASS: independent news/alert folders with identical filenames, 9/11 MB source thumbnails, original not fetched for previews, 20 MB public download cap, private cap preserved, missing/invalid thumbnail errors');
+
+
+// Catalogue reads must not be needed to authorize a single image.
+let scans=0;
+for(const [key,f] of folders){const get=f.getFiles;if(!f._counted){f.getFiles=()=>{scans++;return get()};f._counted=true;}}
+largeNews.getThumbnail=()=>blob(pngBytes,'image/png','thumbnail.png');
+const beforeScans=scans;call('','publicImage',{id:largeNews.getId()});
+assert.equal(scans,beforeScans,'single-image read does not scan folders');
+const unlisted=folder().createFile(blob(pngBytes,'image/png','private.png'));
+assert.throws(()=>call('','publicImage',{id:unlisted.getId()}),/ไม่พบ/,'files outside public folders remain private');
+
+// Managed content must reflect direct replacement of the same Drive file ID.
+const managedCase=call(admin.session,'saveContent',{type:'news',title:'Managed',body:'',link:'',published:true,file:png});
+let entry=call('','catalog').items.find(x=>x.id===managedCase.id);
+const file=files.get(entry.fileId),future='2099-01-01T00:00:00.000Z';file.getLastUpdated=()=>new Date(future);
+assert.equal(call('','catalog').items.find(x=>x.id===managedCase.id).updatedAt,future);
+call(admin.session,'saveContent',{id:managedCase.id,type:'news',title:'Draft',body:'',link:'',published:false});
+assert.throws(()=>call('','publicImage',{id:file.getId()}),/ไม่พบ/,'publication denial still immediate');
+
+// More than 500 records must not silently exclude a module or deny its images.
+const newsFolder=folders.get('1NcwDztc1GVXGrE_pOV1DfagpbnoTPS9r');
+for(let i=0;i<510;i++)newsFolder.createFile(blob(pngBytes,'image/png',String(i+2)+'.png'));
+const all=call('','catalog').items;
+assert(all.filter(x=>x.type==='news').length>500);
+assert(all.some(x=>x.fileId===largeAlert.getId()),'other module not starved by global cap');
+const sorted=all.filter(x=>x.type==='news').map(x=>Number(x.sort));
+assert(sorted.every((x,i)=>i===0||x>=sorted[i-1]),'numeric filename ordering preserved');
+
+assert.equal(ctx.thaiDay_('2026-10-29T16:59:59Z'),'2026-10-29');
+assert.equal(ctx.thaiDay_('2026-10-29T17:00:00Z'),'2026-10-30','quota day changes at Bangkok midnight');
+
+// Simulate interrupted first installation with a separate in-memory database.
+const oldSheets=sheets.splice(0),oldProps=new Map(props);props.clear();
+const realInsert=ss.insertSheet;let inserts=0;
+ss.insertSheet=name=>{if(++inserts===3)throw Error('simulated interruption');return realInsert(name)};
+assert.throws(()=>ctx.initializeV2(),/simulated interruption/);
+assert.equal(props.has('CONFIG_V2'),false,'partial installation is not marked ready');
+assert(props.has('INIT_V2_STATE'),'progress saved for retry');
+const preserved=sheets[0];preserved.appendRow(['keep-existing-data']);
+ss.insertSheet=realInsert;ctx.initializeV2();
+assert(props.has('CONFIG_V2'));assert.equal(sheets[0],preserved);assert.equal(preserved.data[1][0],'keep-existing-data');
+for(const name of ['Cases','Updates','Content','Staff','Sessions','Audit'])assert(ss.getSheetByName('NPT2_'+name));
+const count=sheets.length;ctx.initializeV2();assert.equal(sheets.length,count,'repeat installer creates no duplicate tables');
+preserved.data[0][0]='unexpected-header';assert.throws(()=>ctx.initializeV2(),/หัวตาราง/);assert.equal(preserved.data[0][0],'unexpected-header','mismatched schema is not overwritten');
+console.log('PASS: per-file authorization without folder scans, private files denied, fresh managed file versions, no 500-record truncation, numeric ordering, Bangkok midnight, resumable installation and schema preservation');

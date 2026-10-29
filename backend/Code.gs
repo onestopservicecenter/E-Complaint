@@ -9,7 +9,49 @@ function text_(s,max,min=0){if(typeof s!=='string'||s.trim().length<min||s.trim(
 function rows_(name){const v=db_().getSheetByName('NPT2_'+name).getDataRange().getValues();v.shift();return v.map((r,i)=>{const o={_row:i+2};T_[name].forEach((k,j)=>o[k]=r[j]);return o}).filter(o=>o[T_[name][0]]!=='')}
 function add_(name,o){db_().getSheetByName('NPT2_'+name).appendRow(T_[name].map(k=>safe_(o[k]??'')))}function replace_(name,row,o){db_().getSheetByName('NPT2_'+name).getRange(row,1,1,T_[name].length).setValues([T_[name].map(k=>safe_(o[k]??''))])}
 function audit_(u,action,target){add_('Audit',{at:now_(),actor:u.email,action,target})}function bool_(v){return v===true||v==='true'}
-function initializeV2(){const me=Session.getActiveUser().getEmail().toLowerCase();if(!me||me!==Session.getEffectiveUser().getEmail().toLowerCase())throw Error('รันจาก Apps Script editor ด้วยบัญชีผู้ดูแล');if(prop_().getProperty('CONFIG_V2')){if(cfg_().adminEmail!==me)throw Error('ไม่มีสิทธิ์');return 'ระบบ V2 ติดตั้งแล้ว'}const ss=SpreadsheetApp.getActiveSpreadsheet();if(!ss)throw Error('สร้าง Apps Script จากชีตของหน่วยงาน');if(Object.keys(T_).some(k=>ss.getSheetByName('NPT2_'+k)))throw Error('พบชีตชื่อซ้ำ ห้ามติดตั้งทับข้อมูล');const root=DriveApp.createFolder('NPT Complaint V2 — Private');const folders={};Object.assign(folders,CONTENT_FOLDERS_);['reply','evidence'].forEach(k=>folders[k]=root.createFolder(k).getId());const c={sheetId:ss.getId(),adminEmail:me,folders,contact:'',privacyText:''};prop_().setProperty('CONFIG_V2',JSON.stringify(c));Object.keys(T_).forEach(k=>{const sh=ss.insertSheet('NPT2_'+k);sh.appendRow(T_[k]);sh.setFrozenRows(1)});return 'ติดตั้งแล้ว ตั้ง Script Properties: SITE_ORIGIN, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET และ Deploy เว็บแอป'}
+function ensureTables_(ss){
+ Object.keys(T_).forEach(name=>{
+  const title='NPT2_'+name,headers=T_[name];
+  let sh=ss.getSheetByName(title);
+  if(!sh)sh=ss.insertSheet(title);
+  if(sh.getLastRow()===0)sh.appendRow(headers);
+  else{
+   const actual=sh.getRange(1,1,1,headers.length).getValues()[0];
+   if(headers.some((value,i)=>actual[i]!==value))throw Error('หัวตาราง '+title+' ไม่ตรง หยุดเพื่อป้องกันการเขียนทับข้อมูล');
+  }
+  sh.setFrozenRows(1);
+ });
+}
+function initializeV2(){return lock_(()=>{
+ const me=Session.getActiveUser().getEmail().toLowerCase();
+ if(!me||me!==Session.getEffectiveUser().getEmail().toLowerCase())throw Error('รันจาก Apps Script editor ด้วยบัญชีผู้ดูแล');
+ const p=prop_();
+ if(p.getProperty('CONFIG_V2')){
+  const c=cfg_();if(c.adminEmail!==me)throw Error('ไม่มีสิทธิ์');
+  ensureTables_(SpreadsheetApp.openById(c.sheetId));
+  return 'ตรวจสอบตารางระบบ V2 แล้ว';
+ }
+ const ss=SpreadsheetApp.getActiveSpreadsheet();
+ if(!ss)throw Error('สร้าง Apps Script จากชีตของหน่วยงาน');
+ const pending=p.getProperty('INIT_V2_STATE');
+ let state;
+ if(pending){
+  state=JSON.parse(pending);
+  if(state.adminEmail!==me||state.sheetId!==ss.getId())throw Error('ข้อมูลการติดตั้งค้างไม่ตรงบัญชีหรือชีต');
+ }else{
+  if(Object.keys(T_).some(k=>ss.getSheetByName('NPT2_'+k)))throw Error('พบชีตชื่อซ้ำ ห้ามติดตั้งทับข้อมูล');
+  state={sheetId:ss.getId(),adminEmail:me,folders:{...CONTENT_FOLDERS_},contact:'',privacyText:''};
+  p.setProperty('INIT_V2_STATE',JSON.stringify(state));
+ }
+ if(!state.rootId){state.rootId=DriveApp.createFolder('NPT Complaint V2 — Private').getId();p.setProperty('INIT_V2_STATE',JSON.stringify(state));}
+ const root=DriveApp.getFolderById(state.rootId);
+ ['reply','evidence'].forEach(k=>{if(!state.folders[k]){state.folders[k]=root.createFolder(k).getId();p.setProperty('INIT_V2_STATE',JSON.stringify(state));}});
+ ensureTables_(ss);
+ const {rootId,...config}=state;
+ p.setProperty('CONFIG_V2',JSON.stringify(config));
+ return 'ติดตั้งแล้ว ตั้ง Script Properties: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET และ Deploy เว็บแอป';
+})}
+function thaiDay_(value){const date=new Date(value);if(!Number.isFinite(date.getTime()))return '';return Utilities.formatDate(date,'Asia/Bangkok','yyyy-MM-dd')}
 function siteOrigin_(){const value=(prop_().getProperty('SITE_ORIGIN')||'https://onestopservicecenter.github.io').trim().replace(/\/+$/,'');if(!/^https:\/\/[^/?#\s]+$/.test(value))throw Error('SITE_ORIGIN ต้องเป็น HTTPS origin โดยไม่ใส่ path');return value}
 function doGet(e){const t=HtmlService.createTemplateFromFile('Bridge');t.siteOrigin=siteOrigin_();t.channel=/^[a-f0-9-]{36}$/i.test(e?.parameter?.channel||'')?e.parameter.channel:'';return t.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)}
 function jsonFetch_(url,options={}){const r=UrlFetchApp.fetch(url,{...options,muteHttpExceptions:true,followRedirects:false});if(r.getResponseCode()!==200)throw Error('ไม่สามารถยืนยันบัญชี Google ได้');return JSON.parse(r.getContentText())}
@@ -25,14 +67,51 @@ function updates_(id){return rows_('Updates').filter(x=>x.caseId===id)}function 
 function viewCase_(u,id,staff=false){const c=case_(text_(id,70,1));if(staff)permit_(u,'cases','view',c.category);else if(u.sub!==c.ownerSub)throw Error('ไม่มีสิทธิ์เข้าถึงเรื่องนี้');audit_(u,staff?'staff-read':'owner-read',id);const updates=updates_(id).map(x=>({at:x.at,status:x.status,note:x.note,files:JSON.parse(x.files||'[]'),links:JSON.parse(x.links||'[]'),...(staff?{internal:x.internal,actor:x.actor}:{})}));return {id:c.id,subject:c.subject,category:c.category,status:status_(id),updates,...(staff?{email:c.email,name:c.name,phone:c.phone,location:c.location,details:c.details,evidence:JSON.parse(c.evidence||'[]')}:{})}}
 function checkedFiles_(files){if(!Array.isArray(files)||files.length>3)throw Error('แนบได้ไม่เกิน 3 ไฟล์');return files.map(f=>{const name=text_(f.name,180,1),b64=text_(f.base64,7000000,1);let bytes;try{bytes=Utilities.base64Decode(b64)}catch(e){throw Error('ไฟล์ไม่ถูกต้อง')}if(bytes.length>5242880||!bytes.length)throw Error('ไฟล์เกิน 5 MB หรือไฟล์ว่าง');const b=i=>(bytes[i]+256)%256;let mime='';if(b(0)===255&&b(1)===216&&b(2)===255)mime='image/jpeg';else if([137,80,78,71,13,10,26,10].every((v,i)=>b(i)===v))mime='image/png';else if([37,80,68,70,45].every((v,i)=>b(i)===v))mime='application/pdf';if(!mime)throw Error('อนุญาตเฉพาะ JPG PNG PDF');return {name,mime,bytes}})}
 function storeFiles_(checked,module){const created=[];try{checked.forEach(x=>{const f=DriveApp.getFolderById(CONTENT_FOLDERS_[module]||cfg_().folders[module]).createFile(Utilities.newBlob(x.bytes,x.mime,x.name));created.push({id:f.getId(),name:x.name,mime:x.mime})});return created}catch(e){trash_(created);throw Error('บันทึกไฟล์ไม่ได้')}}function trash_(a){a.forEach(f=>{try{DriveApp.getFileById(f.id).setTrashed(true)}catch(e){}})}
-function submit_(u,d){if(!cfg_().privacyText||!cfg_().contact)throw Error('หน่วยงานยังไม่ได้เปิดรับเรื่อง กรุณารอการตั้งค่าข้อมูลติดต่อและประกาศความเป็นส่วนตัว');const requestId=text_(d.requestId,80,16),old=rows_('Cases').find(c=>c.requestId===requestId&&c.ownerSub===u.sub);if(old)return {id:old.id};if(rows_('Cases').filter(c=>c.ownerSub===u.sub&&String(c.at).slice(0,10)===now_().slice(0,10)).length>=10)throw Error('ส่งได้ไม่เกิน 10 เรื่องต่อวัน');const category=text_(d.category,100,1);if(!CATS_.includes(category)||d.acknowledge!==true)throw Error('ข้อมูลหมวดหรือการรับทราบไม่ถูกต้อง');const subject=text_(d.subject,200,1),details=text_(d.details,10000,20),location=text_(d.location,500,1),name=text_(d.name,120,1),phone=text_(d.phone,25,8);if(!/^[0-9+() -]{8,25}$/.test(phone))throw Error('โทรศัพท์ไม่ถูกต้อง');const checked=checkedFiles_(d.files||[]),created=storeFiles_(checked,'evidence');const id='NPT-'+Utilities.formatDate(new Date(),'Asia/Bangkok','yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,12).toUpperCase();let committed=false;try{add_('Cases',{id,requestId,ownerSub:u.sub,email:u.email,category,subject,details,location,name,phone,evidence:JSON.stringify(created),at:now_(),deleted:false});committed=true;add_('Updates',{id:Utilities.getUuid(),caseId:id,at:now_(),status:STATUSES_[0],note:'รับเรื่องแล้ว รอเจ้าหน้าที่ตรวจสอบ',internal:'',files:'[]',actor:'system',requestId:'intake-'+requestId});audit_(u,'submit',id);return {id}}catch(e){if(!committed)trash_(created);throw Error(committed?'ระบบรับข้อมูลแล้ว โปรดตรวจรายการก่อนส่งซ้ำ':'บันทึกไม่สำเร็จ')}}
+function submit_(u,d){if(!cfg_().privacyText||!cfg_().contact)throw Error('หน่วยงานยังไม่ได้เปิดรับเรื่อง กรุณารอการตั้งค่าข้อมูลติดต่อและประกาศความเป็นส่วนตัว');const requestId=text_(d.requestId,80,16),old=rows_('Cases').find(c=>c.requestId===requestId&&c.ownerSub===u.sub);if(old)return {id:old.id};if(rows_('Cases').filter(c=>c.ownerSub===u.sub&&thaiDay_(c.at)===thaiDay_(now_())).length>=10)throw Error('ส่งได้ไม่เกิน 10 เรื่องต่อวัน');const category=text_(d.category,100,1);if(!CATS_.includes(category)||d.acknowledge!==true)throw Error('ข้อมูลหมวดหรือการรับทราบไม่ถูกต้อง');const subject=text_(d.subject,200,1),details=text_(d.details,10000,20),location=text_(d.location,500,1),name=text_(d.name,120,1),phone=text_(d.phone,25,8);if(!/^[0-9+() -]{8,25}$/.test(phone))throw Error('โทรศัพท์ไม่ถูกต้อง');const checked=checkedFiles_(d.files||[]),created=storeFiles_(checked,'evidence');const id='NPT-'+Utilities.formatDate(new Date(),'Asia/Bangkok','yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,12).toUpperCase();let committed=false;try{add_('Cases',{id,requestId,ownerSub:u.sub,email:u.email,category,subject,details,location,name,phone,evidence:JSON.stringify(created),at:now_(),deleted:false});committed=true;add_('Updates',{id:Utilities.getUuid(),caseId:id,at:now_(),status:STATUSES_[0],note:'รับเรื่องแล้ว รอเจ้าหน้าที่ตรวจสอบ',internal:'',files:'[]',actor:'system',requestId:'intake-'+requestId});audit_(u,'submit',id);return {id}}catch(e){if(!committed)trash_(created);throw Error(committed?'ระบบรับข้อมูลแล้ว โปรดตรวจรายการก่อนส่งซ้ำ':'บันทึกไม่สำเร็จ')}}
 function reply_(u,d){const c=case_(d.id);permit_(u,'cases','view',c.category);const rights=u.role==='admin'?{edit:true,upload:true,addLink:true}:(u.permissions.cases?.[c.category]||{});if(!rights.edit&&!rights.upload&&!rights.addLink)throw Error('ไม่มีสิทธิ์ตอบกลับ');const requestId=text_(d.requestId,80,16);const duplicate=rows_('Updates').find(x=>x.requestId===requestId);if(duplicate){if(duplicate.caseId!==c.id)throw Error('คำขอซ้ำผิดเรื่อง');return {ok:true}}const status=text_(d.status,60,1),note=text_(d.note,3000,1),internal=text_(d.internal||'',3000);if(!STATUSES_.includes(status))throw Error('สถานะไม่ถูกต้อง');if(!rights.edit&&(status!==status_(c.id)||internal))throw Error('ไม่มีสิทธิ์แก้สถานะหรือบันทึกภายใน');if((d.files||[]).length&&!rights.upload)throw Error('ไม่มีสิทธิ์อัปโหลด');const links=Array.isArray(d.links)?d.links:[];if(links.length>5)throw Error('แนบลิงก์ได้ไม่เกิน 5 ลิงก์');const checkedLinks=links.map(x=>({title:text_(x.title,200,1),url:validUrl_(x.url)}));if(checkedLinks.length&&!rights.addLink)throw Error('ไม่มีสิทธิ์เพิ่มลิงก์');if(!rights.edit&&!(d.files||[]).length&&!checkedLinks.length)throw Error('กรุณาแนบไฟล์หรือลิงก์ตามสิทธิ์');const created=storeFiles_(checkedFiles_(d.files||[]),'reply');let committed=false;try{add_('Updates',{id:Utilities.getUuid(),caseId:c.id,at:now_(),status,note,internal,files:JSON.stringify(created),links:JSON.stringify(checkedLinks),actor:u.email,requestId});committed=true;audit_(u,'reply',c.id);return {ok:true}}catch(e){if(!committed)trash_(created);throw Error(committed?'บันทึกผลแล้ว กรุณารีเฟรชตรวจสอบ':'บันทึกไม่สำเร็จ')}}
 
 function sourceStates_(){const sh=db_().getSheetByName('NPT2_SourceState');if(!sh||sh.getLastRow()<2)return [];return sh.getRange(2,1,sh.getLastRow()-1,3).getValues().map(r=>({fileId:r[0],state:r[1],at:r[2]}));}
 function suppressSource_(fileId){let sh=db_().getSheetByName('NPT2_SourceState');if(!sh){sh=db_().insertSheet('NPT2_SourceState');sh.appendRow(['fileId','state','at']);sh.setFrozenRows(1);}sh.appendRow([fileId,'suppressed',now_()]);}
-function driveContent_(typeFilter){const managed=rows_('Content'),blocked=new Set([...managed.map(c=>c.fileId).filter(Boolean),...sourceStates_().map(x=>x.fileId)]);const items=[],issues=[];
- Object.keys(CONTENT_FOLDERS_).filter(type=>!typeFilter||type===typeFilter).forEach(type=>{try{const files=DriveApp.getFolderById(CONTENT_FOLDERS_[type]).getFiles();let count=0;while(files.hasNext()&&count<500){count++;const f=files.next(),mime=f.getMimeType();if(f.isTrashed()||blocked.has(f.getId())||!['image/jpeg','image/png','image/webp','application/pdf'].includes(mime)||type==='banner'&&!mime.startsWith('image/'))continue;const name=f.getName(),prefix=name.match(/^(\d{1,4})[ ._-]/);items.push({id:'drive:'+f.getId(),type,title:name.replace(/\.[^.]+$/,''),body:f.getDescription()||'',link:'',sort:prefix?Number(prefix[1]):9999,published:true,fileId:f.getId(),mime,updatedAt:f.getLastUpdated().toISOString(),deleted:false,external:true});}}catch(e){issues.push(type);}});return {items,issues};}
-function contentCatalog_(typeFilter,includeDrafts=false){const source=driveContent_(typeFilter),managed=rows_('Content').filter(c=>(!typeFilter||c.type===typeFilter)&&!bool_(c.deleted)&&(includeDrafts||bool_(c.published))).map(({_row,...c})=>({...c,published:bool_(c.published)}));return {items:[...managed,...source.items].sort((a,b)=>Number(a.sort)-Number(b.sort)||String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,500),sourceIssues:source.issues};}
+function driveContent_(typeFilter,managedRows){const managed=managedRows||rows_('Content'),blocked=new Set([...managed.map(c=>c.fileId).filter(Boolean),...sourceStates_().map(x=>x.fileId)]);const items=[],issues=[];
+ Object.keys(CONTENT_FOLDERS_).filter(type=>!typeFilter||type===typeFilter).forEach(type=>{try{const files=DriveApp.getFolderById(CONTENT_FOLDERS_[type]).getFiles();while(files.hasNext()){const f=files.next(),mime=f.getMimeType();if(f.isTrashed()||blocked.has(f.getId())||!['image/jpeg','image/png','image/webp','application/pdf'].includes(mime)||type==='banner'&&!mime.startsWith('image/'))continue;const name=f.getName(),prefix=name.match(/^(\d{1,4})[ ._-]/);items.push({id:'drive:'+f.getId(),type,title:name.replace(/\.[^.]+$/,''),body:f.getDescription()||'',link:'',sort:prefix?Number(prefix[1]):9999,published:true,fileId:f.getId(),mime,updatedAt:f.getLastUpdated().toISOString(),deleted:false,external:true});}}catch(e){issues.push(type);}});return {items,issues};}
+function contentCatalog_(typeFilter,includeDrafts=false){
+ const records=rows_('Content'),source=driveContent_(typeFilter,records),issues=[...source.issues],managed=[];
+ records.filter(c=>(!typeFilter||c.type===typeFilter)&&!bool_(c.deleted)&&(includeDrafts||bool_(c.published))).forEach(({_row,...record})=>{
+  const c={...record,published:bool_(record.published)};
+  if(c.fileId){
+   try{
+    const f=DriveApp.getFileById(c.fileId);
+    if(f.isTrashed())return;
+    const fileDate=f.getLastUpdated().toISOString();
+    if(!c.updatedAt||fileDate>String(c.updatedAt))c.updatedAt=fileDate;
+    c.mime=f.getMimeType();
+   }catch(e){issues.push(c.type);return;}
+  }
+  managed.push(c);
+ });
+ return {items:[...managed,...source.items].sort((a,b)=>Number(a.sort)-Number(b.sort)||String(b.updatedAt).localeCompare(String(a.updatedAt))),sourceIssues:[...new Set(issues)]};
+}
+// Authorize one public file without enumerating every content folder.
+// Read current publication records on every request so draft/deletion changes take effect.
+function publicFile_(id){
+ const fileId=text_(id,200,1),records=rows_('Content').filter(c=>c.fileId===fileId);
+ if(records.length){
+  if(!records.some(c=>!bool_(c.deleted)&&bool_(c.published)))throw Error('ไม่พบไฟล์ที่เผยแพร่');
+  return fileId;
+ }
+ if(sourceStates_().some(c=>c.fileId===fileId))throw Error('ไม่พบไฟล์ที่เผยแพร่');
+ let f;
+ try{f=DriveApp.getFileById(fileId)}catch(e){throw Error('ไม่พบไฟล์ที่เผยแพร่')}
+ if(f.isTrashed())throw Error('ไม่พบไฟล์ที่เผยแพร่');
+ const mime=f.getMimeType();
+ if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(mime))throw Error('ชนิดไฟล์ไม่ถูกต้อง');
+ const parents=f.getParents();
+ while(parents.hasNext()){
+  const parentId=parents.next().getId();
+  if(Object.keys(CONTENT_FOLDERS_).some(type=>CONTENT_FOLDERS_[type]===parentId&&(type!=='banner'||mime.startsWith('image/'))))return fileId;
+ }
+ throw Error('ไม่พบไฟล์ที่เผยแพร่');
+}
 
 function validUrl_(s){if(!s)return '';const v=text_(s,1000,1);if(!/^https:\/\/[^\s]+$/.test(v))throw Error('ลิงก์ต้องเป็น HTTPS');return v}
 function saveContent_(u,d){if(!['banner','news','alert'].includes(d.type))throw Error('ส่วนงานไม่ถูกต้อง');const stored=d.id?rows_('Content').find(c=>c.id===d.id&&!bool_(c.deleted)):null;const old=stored||(d.id?driveContent_(d.type).items.find(c=>c.id===d.id):null);if(d.id&&!old)throw Error('ไม่พบรายการ');if(old&&old.type!==d.type)throw Error('เปลี่ยนส่วนงานไม่ได้');permit_(u,d.type,old?'edit':'add');const title=text_(d.title,200,1),body=text_(d.body||'',15000),link=validUrl_(d.link),sort=Math.max(0,Math.min(9999,Number(d.sort)||0));const checked=d.file?checkedFiles_([d.file]):[];if(d.type==='banner'&&checked.some(f=>!f.mime.startsWith('image/')))throw Error('แบนเนอร์ใช้รูปภาพเท่านั้น');if(d.type==='banner'&&!old?.fileId&&!checked.length)throw Error('กรุณาแนบรูปแบนเนอร์');const created=storeFiles_(checked,d.type);const o={id:old?.id||Utilities.getUuid(),type:d.type,title,body,link,sort,published:!!d.published,fileId:created[0]?.id||old?.fileId||'',mime:created[0]?.mime||old?.mime||'',updatedAt:now_(),deleted:false};let committed=false;try{stored?replace_('Content',stored._row,o):add_('Content',o);committed=true;if(old?.fileId&&old.fileId!==o.fileId)suppressSource_(old.fileId);audit_(u,'save-'+d.type,o.id);return {ok:true,id:o.id}}catch(e){if(!committed)trash_(created);throw Error(committed?'บันทึกแล้ว กรุณารีเฟรช':'บันทึกไม่สำเร็จ')}}
@@ -58,7 +137,7 @@ function filePayload_(id,thumbnail=false,maxBytes=5242880){
 function allowedFile_(u,id){const cs=rows_('Cases').filter(c=>!bool_(c.deleted));for(const c of cs){const found=JSON.parse(c.evidence||'[]').some(f=>f.id===id)||updates_(c.id).some(x=>JSON.parse(x.files||'[]').some(f=>f.id===id));if(found){accessCase_(u,c);audit_(u,'file-read',c.id);return;}}throw Error('ไม่มีสิทธิ์เข้าถึงไฟล์')}
 function api(r){if(!r||typeof r.action!=='string')throw Error('คำขอไม่ถูกต้อง');const a=r.action,d=r.data||{};if(JSON.stringify(d).length>22000000)throw Error('ข้อมูลเกินขนาด');
  if(a==='catalog'){const c=cfg_();return {...contentCatalog_(),contact:c.contact,privacyText:c.privacyText}}
- if(a==='publicImage'||a==='publicFile'){const c=contentCatalog_().items.find(c=>c.fileId===d.id);if(!c)throw Error('ไม่พบไฟล์ที่เผยแพร่');return filePayload_(d.id,a==='publicImage',20971520)}
+ if(a==='publicImage'||a==='publicFile'){const id=publicFile_(d.id);return filePayload_(id,a==='publicImage',20971520)}
  if(a==='beginLogin')return beginLogin_(d);if(a==='completeLogin')return lock_(()=>completeLogin_(d));
  const u=auth_(r.session);
  if(a==='me')return u;
@@ -80,3 +159,4 @@ function api(r){if(!r||typeof r.action!=='string')throw Error('คำขอไ�
  if(a==='saveSiteSettings'){admin_(u);return lock_(()=>{const c=cfg_();c.contact=text_(d.contact||'',1000);c.privacyText=text_(d.privacyText||'',5000);prop_().setProperty('CONFIG_V2',JSON.stringify(c));audit_(u,'site-settings','');return {ok:true}})}
  throw Error('ไม่พบคำสั่ง');
 }
+
