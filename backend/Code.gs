@@ -37,11 +37,28 @@ function contentCatalog_(typeFilter,includeDrafts=false){const source=driveConte
 function validUrl_(s){if(!s)return '';const v=text_(s,1000,1);if(!/^https:\/\/[^\s]+$/.test(v))throw Error('ลิงก์ต้องเป็น HTTPS');return v}
 function saveContent_(u,d){if(!['banner','news','alert'].includes(d.type))throw Error('ส่วนงานไม่ถูกต้อง');const stored=d.id?rows_('Content').find(c=>c.id===d.id&&!bool_(c.deleted)):null;const old=stored||(d.id?driveContent_(d.type).items.find(c=>c.id===d.id):null);if(d.id&&!old)throw Error('ไม่พบรายการ');if(old&&old.type!==d.type)throw Error('เปลี่ยนส่วนงานไม่ได้');permit_(u,d.type,old?'edit':'add');const title=text_(d.title,200,1),body=text_(d.body||'',15000),link=validUrl_(d.link),sort=Math.max(0,Math.min(9999,Number(d.sort)||0));const checked=d.file?checkedFiles_([d.file]):[];if(d.type==='banner'&&checked.some(f=>!f.mime.startsWith('image/')))throw Error('แบนเนอร์ใช้รูปภาพเท่านั้น');if(d.type==='banner'&&!old?.fileId&&!checked.length)throw Error('กรุณาแนบรูปแบนเนอร์');const created=storeFiles_(checked,d.type);const o={id:old?.id||Utilities.getUuid(),type:d.type,title,body,link,sort,published:!!d.published,fileId:created[0]?.id||old?.fileId||'',mime:created[0]?.mime||old?.mime||'',updatedAt:now_(),deleted:false};let committed=false;try{stored?replace_('Content',stored._row,o):add_('Content',o);committed=true;if(old?.fileId&&old.fileId!==o.fileId)suppressSource_(old.fileId);audit_(u,'save-'+d.type,o.id);return {ok:true,id:o.id}}catch(e){if(!committed)trash_(created);throw Error(committed?'บันทึกแล้ว กรุณารีเฟรช':'บันทึกไม่สำเร็จ')}}
 function cleanPermissions_(p){const result={cases:{}};const ops=['view','add','edit','delete'];['banner','news','alert'].forEach(k=>{result[k]={};ops.forEach(op=>result[k][op]=p?.[k]?.[op]===true)});CATS_.forEach(cat=>{result.cases[cat]={};['view','addLink','upload','edit','delete'].forEach(op=>result.cases[cat][op]=p?.cases?.[cat]?.[op]===true)});return result}
-function filePayload_(id,thumbnail=false){const f=DriveApp.getFileById(id);if(f.isTrashed()||f.getSize()>5242880)throw Error('ไฟล์ไม่พร้อมใช้งาน');let blob=f.getBlob();if(thumbnail){const thumb=f.getThumbnail();if(thumb)blob=thumb;}const mime=blob.getContentType();if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(mime)||thumbnail&&!mime.startsWith('image/'))throw Error('ชนิดไฟล์ไม่ถูกต้อง');return {name:f.getName(),mime,base64:Utilities.base64Encode(blob.getBytes())}}
+function filePayload_(id,thumbnail=false,maxBytes=5242880){
+ const f=DriveApp.getFileById(id);
+ if(f.isTrashed())throw Error('ไฟล์ไม่พร้อมใช้งาน');
+ let blob;
+ if(thumbnail){
+  // A large source image may have a small Drive thumbnail. Read that first.
+  blob=f.getThumbnail();
+  if(!blob){if(f.getSize()>5242880)throw Error('ภาพตัวอย่างยังไม่พร้อม กรุณาลองใหม่ภายหลัง');blob=f.getBlob();}
+ }else{
+  if(f.getSize()>maxBytes)throw Error('ไฟล์เกินขนาดที่ระบบรองรับ');
+  blob=f.getBlob();
+ }
+ const mime=blob.getContentType();
+ if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(mime)||thumbnail&&!mime.startsWith('image/'))throw Error('ชนิดไฟล์ไม่ถูกต้อง');
+ const bytes=blob.getBytes();
+ if(!bytes.length||bytes.length>(thumbnail?5242880:maxBytes))throw Error('ไฟล์เกินขนาดที่ระบบรองรับหรือไฟล์ว่าง');
+ return {name:f.getName(),mime,base64:Utilities.base64Encode(bytes)};
+}
 function allowedFile_(u,id){const cs=rows_('Cases').filter(c=>!bool_(c.deleted));for(const c of cs){const found=JSON.parse(c.evidence||'[]').some(f=>f.id===id)||updates_(c.id).some(x=>JSON.parse(x.files||'[]').some(f=>f.id===id));if(found){accessCase_(u,c);audit_(u,'file-read',c.id);return;}}throw Error('ไม่มีสิทธิ์เข้าถึงไฟล์')}
 function api(r){if(!r||typeof r.action!=='string')throw Error('คำขอไม่ถูกต้อง');const a=r.action,d=r.data||{};if(JSON.stringify(d).length>22000000)throw Error('ข้อมูลเกินขนาด');
  if(a==='catalog'){const c=cfg_();return {...contentCatalog_(),contact:c.contact,privacyText:c.privacyText}}
- if(a==='publicImage'||a==='publicFile'){const c=contentCatalog_().items.find(c=>c.fileId===d.id);if(!c)throw Error('ไม่พบไฟล์ที่เผยแพร่');return filePayload_(d.id,a==='publicImage')}
+ if(a==='publicImage'||a==='publicFile'){const c=contentCatalog_().items.find(c=>c.fileId===d.id);if(!c)throw Error('ไม่พบไฟล์ที่เผยแพร่');return filePayload_(d.id,a==='publicImage',20971520)}
  if(a==='beginLogin')return beginLogin_(d);if(a==='completeLogin')return lock_(()=>completeLogin_(d));
  const u=auth_(r.session);
  if(a==='me')return u;

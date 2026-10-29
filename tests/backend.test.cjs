@@ -19,3 +19,23 @@ assert.throws(()=>login({sub:'bad',email:'bad@gmail.com',email_verified:false}),
 console.log('PASS: Google code exchange mock, one-time login state, immutable owner binding, private tracking, category rights, upload/link-only staff, no status change without edit, content module separation, public draft denial, session logout, disabled staff, file signatures and soft deletion');
 
 const source=folders.get('1qcdLbbSm_iqjq9pS1t8nwKhRf5T98mvX').createFile(blob([137,80,78,71,13,10,26,10,0],'image/png','01 Source banner.png'));const external=call('','catalog').items.find(x=>x.fileId===source.getId());assert(external&&external.type==='banner');assert.equal(call('','publicImage',{id:source.getId()}).mime,'image/png');call(admin.session,'saveContent',{id:external.id,type:'banner',title:'Updated source',body:'',link:'',published:true,file:png});assert(!call('','catalog').items.some(x=>x.fileId===source.getId()));assert.equal(call('','catalog').items.filter(x=>x.type==='banner').length,1);call(admin.session,'deleteContent',{id:external.id});assert.equal(call('','catalog').items.filter(x=>x.type==='banner').length,0);assert(files.has(source.getId()),'source file must not be deleted or sharing changed');console.log('PASS: exact source folders, automatic folder catalog, external file editing, replacement suppression and non-destructive removal');
+
+const pngBytes=[137,80,78,71,13,10,26,10,0];
+const largeNews=folders.get('1NcwDztc1GVXGrE_pOV1DfagpbnoTPS9r').createFile(blob(pngBytes,'image/png','1.png'));
+const largeAlert=folders.get('12tPWpOi6eESO-oub_2Cx_kF07sYsM3qj').createFile(blob(pngBytes,'image/png','1.png'));
+largeNews.getSize=()=>9321479;largeAlert.getSize=()=>11260797;
+for(const f of [largeNews,largeAlert]){
+ f.getThumbnail=()=>blob(pngBytes,'image/png','thumbnail.png');
+ const originalBlob=f.getBlob;let originalsRead=0;f.getBlob=()=>{originalsRead++;return originalBlob()};
+ assert.equal(call('','publicImage',{id:f.getId()}).mime,'image/png');
+ assert.equal(originalsRead,0,'large preview never reads the full source');
+ assert.equal(call('','publicFile',{id:f.getId()}).mime,'image/png');
+ assert.throws(()=>ctx.filePayload_(f.getId()),/เกินขนาด/,'private file limit remains 5 MB');
+}
+const separate=call('','catalog').items.filter(x=>[largeNews.getId(),largeAlert.getId()].includes(x.fileId));
+assert.equal(separate.find(x=>x.fileId===largeNews.getId()).type,'news');
+assert.equal(separate.find(x=>x.fileId===largeAlert.getId()).type,'alert');
+largeNews.getThumbnail=()=>null;assert.throws(()=>call('','publicImage',{id:largeNews.getId()}),/ภาพตัวอย่างยังไม่พร้อม/);
+largeAlert.getSize=()=>20971521;assert.throws(()=>call('','publicFile',{id:largeAlert.getId()}),/เกินขนาด/);
+largeAlert.getThumbnail=()=>blob(pngBytes,'text/html','bad.html');assert.throws(()=>call('','publicImage',{id:largeAlert.getId()}),/ชนิดไฟล์/);
+console.log('PASS: independent news/alert folders with identical filenames, 9/11 MB source thumbnails, original not fetched for previews, 20 MB public download cap, private cap preserved, missing/invalid thumbnail errors');
