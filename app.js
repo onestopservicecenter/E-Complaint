@@ -20,8 +20,8 @@ const BANNER_CACHE_TTL=24*60*60*1000;
 function imageKey(c,fullSize=true){return JSON.stringify([c.fileId,String(c.updatedAt||''),fullSize])}
 function validImagePayload(p){return p&&['image/jpeg','image/png','image/webp'].includes(p.mime)&&typeof p.base64==='string'&&p.base64.length>0&&p.base64.length<=7000000&&/^[A-Za-z0-9+/]*={0,2}$/.test(p.base64)}
 function rememberImage(key,p){publicImageCache.delete(key);publicImageCache.set(key,p);while(publicImageCache.size>12)publicImageCache.delete(publicImageCache.keys().next().value)}
-async function publicImage(c,fullSize){const key=imageKey(c,fullSize);if(publicImageCache.has(key))return publicImageCache.get(key);if(publicImageRequests.has(key))return publicImageRequests.get(key);const task=(async()=>{const p=await api(fullSize?'publicFile':'publicImage',{id:c.fileId});if(!validImagePayload(p))throw Error('ข้อมูลภาพไม่ถูกต้อง');rememberImage(key,p);return p})();publicImageRequests.set(key,task);try{return await task}finally{publicImageRequests.delete(key)}}
-async function imageFor(fileId,img,fullSize=false,updatedAt=''){img.hidden=true;img.loading='eager';try{const p=await publicImage({fileId,updatedAt},fullSize);img.src='data:'+p.mime+';base64,'+p.base64;if(typeof img.decode==='function')await img.decode();img.hidden=false;return true}catch{img.hidden=true;return false}}
+async function publicImage(c,fullSize){const key=imageKey(c,fullSize);if(publicImageCache.has(key))return publicImageCache.get(key);if(!fullSize){const saved=savedPreview(key);if(saved){rememberImage(key,saved);return saved}}if(publicImageRequests.has(key))return publicImageRequests.get(key);const task=(async()=>{const p=await api(fullSize?'publicFile':'publicImage',{id:c.fileId});if(!validImagePayload(p))throw Error('ข้อมูลภาพไม่ถูกต้อง');rememberImage(key,p);return p})();publicImageRequests.set(key,task);try{return await task}finally{publicImageRequests.delete(key)}}
+async function imageFor(fileId,img,fullSize=false,updatedAt=''){img.hidden=true;img.loading='eager';try{const p=await publicImage({fileId,updatedAt},fullSize);img.src='data:'+p.mime+';base64,'+p.base64;if(typeof img.decode==='function')await img.decode();img.hidden=false;if(!fullSize)cachePreview({fileId,updatedAt},img);return true}catch{img.hidden=true;return false}}
 function bannerStatus(text=''){const s=$('#bannerStatus');if(s){s.textContent=text;s.hidden=!text}}
 function saveBannerCache(c){try{const p=publicImageCache.get(imageKey(c));if(p&&p.base64.length<=3000000)sessionStorage.setItem(BANNER_CACHE_KEY,JSON.stringify({at:Date.now(),item:{fileId:c.fileId,updatedAt:c.updatedAt,title:c.title||'',link:c.link||''},image:p}))}catch{/* Storage may be disabled or full. Rendering must still work. */}}
 function clearBannerCache(){try{sessionStorage.removeItem(BANNER_CACHE_KEY)}catch{}}
@@ -31,37 +31,65 @@ let slides=[],slideIndex=0,bannerSignature='',bannerCatalogSeen=false,contentLoa
 const sectionSignatures=new Map();
 function showSlide(n){if(!slides.length)return;slideIndex=(n+slides.length)%slides.length;slides.forEach((s,i)=>s.classList.toggle('hidden',i!==slideIndex));$('#bannerCount').textContent=(slideIndex+1)+' / '+slides.length}
 async function renderBanners(items,sourceUnavailable=false){bannerCatalogSeen=true;if(sourceUnavailable){if(!slides.length)bannerStatus('โหลดแบนเนอร์ไม่สำเร็จ กรุณาลองใหม่ภายหลัง');return}const signature=JSON.stringify(items.map(c=>[c.fileId,c.updatedAt,c.title,c.link]));if(signature===bannerSignature)return;if(!items.length){slides=[];slideIndex=0;$('#banners').replaceChildren();$('#bannerCount').textContent='';bannerSignature=signature;clearBannerCache();bannerStatus('ยังไม่มีแบนเนอร์ที่เผยแพร่');return}const staged=[];let failed=false;for(const c of items){const a=await bannerElement(c);if(!a){failed=true;continue}staged.push(a);if(!slides.length){slides=[a];$('#banners').replaceChildren(a);showSlide(0);bannerStatus();saveBannerCache(c)}}if(!staged.length){if(!slides.length)bannerStatus('โหลดภาพแบนเนอร์ไม่สำเร็จ กรุณาลองใหม่ภายหลัง');return}const current=slides[slideIndex]?.dataset.fileKey;slides=staged;$('#banners').replaceChildren(...slides);const selected=slides.findIndex(a=>a.dataset.fileKey===current);showSlide(selected<0?0:selected);bannerStatus();saveBannerCache(items.find(c=>imageKey(c)===slides[0].dataset.fileKey));if(!failed)bannerSignature=signature;}
-function contentTitle(c){const title=String(c.title||'').replace(/\.(png|jpe?g|webp|pdf)$/i,'').trim();return /^\d+$/.test(title)?'':title}
-let documentView=0;
-const documentCache=new Map(),documentRequests=new Map();
-async function publicDocument(c){
- const key=imageKey(c,true);
- if(documentCache.has(key))return documentCache.get(key);
- if(documentRequests.has(key))return documentRequests.get(key);
- const job=(async()=>{const payload=await api('publicFile',{id:c.fileId});if(!window.PublicDocumentPdf)throw Error('บริการเปิด PDF ยังโหลดไม่เสร็จ กรุณารีเฟรชหน้าเว็บ');const blob=await window.PublicDocumentPdf.fromPayload(payload);const result={url:URL.createObjectURL(blob),name:payload.name};documentCache.set(key,result);while(documentCache.size>3){const oldKey=documentCache.keys().next().value;URL.revokeObjectURL(documentCache.get(oldKey).url);documentCache.delete(oldKey)}return result})();
- documentRequests.set(key,job);try{return await job}finally{documentRequests.delete(key)}
-}
-async function openPublicDocument(c){
- const dialog=$('#article'),body=$('#articleBody'),view=++documentView;
- const title=contentTitle(c)||(c.type==='alert'?'ข่าวเตือนภัย':'ข่าวประชาสัมพันธ์');
- body.replaceChildren(make('h2',title));
- const status=make('p','กำลังเปิดเอกสาร PDF…');status.setAttribute('role','status');body.append(status);
- if(!dialog.open)dialog.showModal();
- if(!c.fileId){status.textContent=c.body||'ยังไม่มีไฟล์เอกสาร';const link=safeLink(c.link);if(link){const a=make('a','อ่านจากแหล่งข้อมูล ↗');a.href=link;a.target='_blank';a.rel='noopener noreferrer';body.append(a)}return}
+const PREVIEW_STORAGE_KEY='npt-public-previews-v1:'+cfg.webAppUrl;
+const CARD_STORAGE_KEY='npt-public-cards-v1:'+cfg.webAppUrl;
+function readPublicCache(key){try{const value=JSON.parse(sessionStorage.getItem(key)||'null');if(value&&Number.isFinite(value.at)&&Date.now()-value.at<86400000&&value.at<=Date.now()&&value.data&&typeof value.data==='object'&&!Array.isArray(value.data))return value.data}catch{}return {}}
+const savedPreviews=readPublicCache(PREVIEW_STORAGE_KEY),savedCards=readPublicCache(CARD_STORAGE_KEY);
+function savePublicCache(key,data){try{sessionStorage.setItem(key,JSON.stringify({at:Date.now(),data}))}catch{}}
+function savedPreview(key){const p=savedPreviews[key];return validImagePayload(p)?p:null}
+function cachePreview(c,img){
  try{
-  const pdf=await publicDocument(c);
-  if(view!==documentView||!dialog.open)return;
-  status.remove();
-  const tools=make('div');tools.className='document-tools';
-  const open=make('a','เปิด PDF ในแท็บใหม่ ↗');open.href=pdf.url;open.target='_blank';open.rel='noopener';open.className='button';
-  const download=make('a','ดาวน์โหลด PDF');download.href=pdf.url;download.download=title+'.pdf';download.className='button';tools.append(open,download);body.append(tools);
-  const frame=make('iframe');frame.className='document-pdf';frame.title=title+' — PDF';frame.src=pdf.url+'#view=FitH';body.append(frame);
- }catch(e){if(view!==documentView||!dialog.open)return;status.textContent='เปิดเอกสารไม่สำเร็จ: '+e.message;const retry=make('button','ลองอีกครั้ง');retry.onclick=()=>openPublicDocument(c);body.append(retry)}
+  if(savedPreview(imageKey(c,false))||!img.naturalWidth||!img.naturalHeight)return;
+  const canvas=document.createElement('canvas'),scale=Math.min(1,1200/Math.max(img.naturalWidth,img.naturalHeight));
+  canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+  const context=canvas.getContext('2d');if(!context)return;
+  context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(img,0,0,canvas.width,canvas.height);
+  const value=canvas.toDataURL('image/jpeg',0.86).split(',')[1];canvas.width=canvas.height=1;
+  if(!value||value.length>600000)return;
+  const key=imageKey(c,false);delete savedPreviews[key];savedPreviews[key]={mime:'image/jpeg',base64:value};
+  let size=Object.values(savedPreviews).reduce((n,p)=>n+(p.base64?.length||0),0);
+  for(const oldKey of Object.keys(savedPreviews)){if(size<=1200000)break;size-=savedPreviews[oldKey].base64?.length||0;delete savedPreviews[oldKey]}
+  savePublicCache(PREVIEW_STORAGE_KEY,savedPreviews);
+ }catch{/* Browsing must work even when canvas or storage is unavailable. */}
 }
-$('#article')?.addEventListener('close',()=>{documentView++;$('#articleBody').replaceChildren()});
-window.addEventListener('pagehide',()=>{for(const entry of documentCache.values())URL.revokeObjectURL(entry.url);documentCache.clear()});
-
-async function loadContent(){if(!$('#newsCards')||contentLoading)return;contentLoading=true;try{const r=await api('catalog');if(!r||!Array.isArray(r.items))throw Error('รายการเนื้อหาไม่ถูกต้อง');$('#contact').textContent=r.contact||'';if(r.privacyText)$('#privacyText').textContent=r.privacyText;await renderBanners(r.items.filter(c=>c.type==='banner'),r.sourceIssues?.includes('banner'));['news','alert'].forEach(type=>{if(r.sourceIssues?.includes(type))return;const holder=$(type==='news'?'#newsCards':'#alertCards'),items=r.items.filter(c=>c.type===type),signature=JSON.stringify(items);if(sectionSignatures.get(type)===signature)return;sectionSignatures.set(type,signature);holder.replaceChildren();if(!items.length){holder.append(make('p',type==='news'?'ยังไม่มีข่าวประชาสัมพันธ์ที่เผยแพร่':'ยังไม่มีข่าวเตือนภัยที่เผยแพร่'));return}items.forEach(c=>{const a=make('article');a.className='news-card';if(c.fileId&&(String(c.mime).startsWith('image/')||c.mime==='application/pdf')){const img=make('img');img.alt=contentTitle(c)||(type==='alert'?'ข่าวเตือนภัย':'ข่าวประชาสัมพันธ์');img.loading='eager';const imageButton=make('button');imageButton.type='button';imageButton.className='news-image-button';imageButton.setAttribute('aria-label','เปิด PDF '+img.alt);imageButton.onclick=()=>openPublicDocument(c);imageButton.append(img);a.append(imageButton);imageFor(c.fileId,img,false,c.updatedAt)}a.append(make('small',new Date(c.updatedAt).toLocaleDateString('th-TH')));const title=contentTitle(c);if(title)a.append(make('h3',title));const b=make('button','อ่านเพิ่มเติม →');b.onclick=()=>openPublicDocument(c);a.append(b);holder.append(a)})});}catch(e){if(!slides.length)bannerStatus('โหลดแบนเนอร์ไม่สำเร็จ: '+e.message);notice(e.message)}finally{contentLoading=false}}
+function contentTitle(c){const title=String(c.title||'').replace(/\.(png|jpe?g|webp|pdf)$/i,'').trim();return /^\d+$/.test(title)?'':title}
+function contentFileUrl(c){return typeof c.fileId==='string'&&/^[A-Za-z0-9_-]+$/.test(c.fileId)?'https://drive.google.com/file/d/'+encodeURIComponent(c.fileId)+'/view':safeLink(c.link)}
+function readMore(c){
+ const href=contentFileUrl(c);
+ if(href){const a=make('a','อ่านเพิ่มเติม →');a.className='read-more-button';a.href=href;a.target='_blank';a.rel='noopener noreferrer';return a}
+ const b=make('button','อ่านเพิ่มเติม →');b.className='read-more-button';b.onclick=()=>{const body=$('#articleBody');body.replaceChildren(make('h2',contentTitle(c)||(c.type==='alert'?'ข่าวเตือนภัย':'ข่าวประชาสัมพันธ์')),make('pre',c.body||''));$('#article').showModal()};return b;
+}
+function renderPublicCards(type,items,restoring=false){
+ const holder=$(type==='news'?'#newsCards':'#alertCards');if(!holder)return;
+ const signature=JSON.stringify(items);if(sectionSignatures.get(type)===signature)return;
+ sectionSignatures.set(type,signature);holder.replaceChildren();
+ if(!items.length){if(!restoring){savedCards[type]=[];savePublicCache(CARD_STORAGE_KEY,savedCards)}holder.append(make('p',type==='news'?'ยังไม่มีข่าวประชาสัมพันธ์ที่เผยแพร่':'ยังไม่มีข่าวเตือนภัยที่เผยแพร่'));return}
+ items.forEach(c=>{
+  const card=make('article');card.className='news-card';const title=contentTitle(c),href=contentFileUrl(c);
+  if(c.fileId&&(String(c.mime).startsWith('image/')||c.mime==='application/pdf')){
+   const img=make('img');img.alt=title||(type==='alert'?'ข่าวเตือนภัย':'ข่าวประชาสัมพันธ์');img.loading='eager';
+   const link=make('a');link.className='news-image-button';link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','เปิดไฟล์ '+img.alt);link.append(img);card.append(link);
+   imageFor(c.fileId,img,false,c.updatedAt).then(ok=>{if(!ok)sectionSignatures.delete(type)});
+  }
+  card.append(make('small',new Date(c.updatedAt).toLocaleDateString('th-TH')));if(title)card.append(make('h3',title));card.append(readMore(c));holder.append(card);
+ });
+ if(!restoring){savedCards[type]=items.map(c=>({type:c.type,fileId:c.fileId,mime:c.mime,title:c.title,link:c.link,updatedAt:c.updatedAt}));savePublicCache(CARD_STORAGE_KEY,savedCards);}
+}
+function restorePublicCards(){
+ ['news','alert'].forEach(type=>{
+  const items=Array.isArray(savedCards[type])?savedCards[type].filter(c=>c&&c.type===type&&savedPreview(imageKey(c,false))):[];
+  if(items.length)renderPublicCards(type,items,true);
+ });
+}
+async function loadContent(){
+ if(!$('#newsCards')||contentLoading)return;contentLoading=true;
+ try{
+  const r=await api('catalog');if(!r||!Array.isArray(r.items))throw Error('รายการเนื้อหาไม่ถูกต้อง');
+  $('#contact').textContent=r.contact||'';if(r.privacyText)$('#privacyText').textContent=r.privacyText;
+  ['news','alert'].forEach(type=>{if(!r.sourceIssues?.includes(type))renderPublicCards(type,r.items.filter(c=>c.type===type))});
+  await renderBanners(r.items.filter(c=>c.type==='banner'),r.sourceIssues?.includes('banner'));
+ }catch(e){if(!slides.length)bannerStatus('โหลดแบนเนอร์ไม่สำเร็จ: '+e.message);notice(e.message)}finally{contentLoading=false}
+}
 
 async function loadMyCases(){if(!user)return;try{const r=await api('myCases');const holder=$('#myCases');holder.replaceChildren();if(!r.length)holder.append(make('p','ยังไม่มีเรื่องร้องเรียนในบัญชีนี้'));r.forEach(c=>{const a=make('article');a.className='case-card';a.append(make('strong',c.id),make('h3',c.subject),make('span',c.status));const b=make('button','ดูสถานะและเอกสารตอบกลับ');b.onclick=()=>openMyCase(c.id);a.append(b);holder.append(a)});const id=new URLSearchParams(location.hash.slice(1)).get('case');if(id)await openMyCase(id)}catch(e){$('#trackMessage').textContent=e.message}}
 async function openMyCase(id){try{const c=await api('case',{id}),holder=$('#caseBody');holder.replaceChildren(make('h2',c.id),make('h3',c.subject),make('p','สถานะ: '+c.status));c.updates.slice().reverse().forEach(u=>{const a=make('article');a.append(make('small',new Date(u.at).toLocaleString('th-TH')),make('h3',u.status),make('pre',u.note));u.files.forEach(f=>{const b=make('button',(f.mime.startsWith('image/')?'ดูรูปภาพ: ':'เปิดเอกสาร: ')+f.name);b.onclick=()=>openFile(f.id,a).catch(e=>notice(e.message));a.append(b)});(u.links||[]).forEach(l=>{const url=safeLink(l.url);if(url){const link=make('a',l.title+' ↗');link.href=url;link.target='_blank';link.rel='noopener noreferrer';a.append(link)}});holder.append(a)});const details=make('details');details.append(make('summary','QR สำหรับกลับมาติดตามเรื่องนี้'));const qr=qrcode(0,'M');qr.addData(location.origin+location.pathname+'#case='+encodeURIComponent(c.id));qr.make();const div=make('div');div.className='qr';div.innerHTML=qr.createSvgTag({cellSize:4,margin:4,scalable:true});details.append(div,make('p','ต้องเข้าสู่ระบบด้วยบัญชีผู้ร้องเดิมเพื่อดูข้อมูล'));holder.append(details);$('#caseDialog').showModal()}catch(e){notice(e.message)}}
@@ -76,3 +104,6 @@ window.addEventListener('hashchange',routePage);routePage();
 
 restoreBannerCache();
 
+
+
+restorePublicCards();

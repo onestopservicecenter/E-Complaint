@@ -8,10 +8,22 @@ windowEvents.message({origin:'https://demo-script.googleusercontent.com',source:
 
 
 
-assert.equal(context.contentTitle({title:'1'}),'');assert.equal(context.contentTitle({title:'01.png'}),'');assert.equal(context.contentTitle({title:'เฝ้าระวังผลิตภัณฑ์เสริมอาหารโคเรีย เพียว'}),'เฝ้าระวังผลิตภัณฑ์เสริมอาหารโคเรีย เพียว');assert(html.includes('public-document.js'));
-
-E.prototype.showModal=function(){this.open=true};E.prototype.remove=function(){};
+assert.equal(context.contentTitle({title:'1'}),'');
+assert.equal(context.contentTitle({title:'01.png'}),'');
+assert.equal(context.contentTitle({title:'เฝ้าระวังผลิตภัณฑ์เสริมอาหารโคเรีย เพียว.png'}),'เฝ้าระวังผลิตภัณฑ์เสริมอาหารโคเรีย เพียว');
+assert(!html.includes('public-document.js'));
 const nativeCreate=context.document.createElement;context.document.createElement=tag=>{const e=nativeCreate();e.tag=tag;return e};
-context.window.PublicDocumentPdf={fromPayload:async()=>new Blob(['%PDF-1.4'],{type:'application/pdf'})};
-context.api=async(action,data)=>{assert.equal(action,'publicFile');return {name:'1.png',mime:'image/png',base64:'AA=='}};
-(async()=>{await context.openPublicDocument({fileId:'public-id',updatedAt:'v1',type:'alert',title:'1'});const children=ids.get('#articleBody').children;assert.equal(children[0].textContent,'ข่าวเตือนภัย');const frame=children.find(e=>e.tag==='iframe');assert(frame&&frame.src.startsWith('blob:'),'read more opens PDF immediately');assert(!children.some(e=>e.textContent==='เปิดไฟล์ประกอบ'));console.log('PASS: numeric-only titles hidden, human titles preserved, read-more opens PDF without a second attachment button')})().catch(e=>{console.error(e);process.exitCode=1});
+context.imageFor=async()=>true;
+const news={type:'news',fileId:'news-file',mime:'image/png',title:'1.png',updatedAt:'2026-10-29'};
+const alert={...news,type:'alert',fileId:'alert-file',mime:'application/pdf'};
+context.renderPublicCards('news',[news]);context.renderPublicCards('alert',[alert]);
+for(const [id,item] of [['#newsCards',news],['#alertCards',alert]]){
+ const card=ids.get(id).children[0];assert(!card.children.some(e=>e.tag==='h3'));
+ const link=card.children.at(-1);assert.equal(link.tag,'a');
+ assert.equal(link.href,'https://drive.google.com/file/d/'+item.fileId+'/view');
+ assert.equal(link.target,'_blank');assert.equal(link.rel,'noopener noreferrer');
+ assert.equal(card.children[0].href,link.href);assert.equal(link.onclick,undefined);
+}
+assert.equal(context.contentFileUrl({fileId:'bad/id',link:'javascript:alert(1)'}),'');
+context.renderPublicCards('news',[]);assert.equal(vm.runInContext('savedCards.news.length',context),0);
+console.log('PASS: balanced previews link directly to distinct Drive originals, image and PDF links, numeric titles hidden, human names preserved, confirmed deletion clears card cache');

@@ -34,7 +34,17 @@ const concurrent1=context.imageFor('C',new E(),true,'v1');const concurrent2=cont
 assert.equal(calls.length,requests+1,'parallel duplicate requests share one response');jobs.shift().resolve(payload);await Promise.all([concurrent1,concurrent2]);
 const decoding=new E();decoding.loading='lazy';decoding.decode=()=>{assert.equal(decoding.loading,'eager','hidden image must load before decode');return Promise.resolve()};const decoded=context.imageFor('Decode',decoding,true,'v1');jobs.shift().resolve(payload);assert.equal(await decoded,true);assert.equal(decoding.hidden,false);
 const bad=context.imageFor('D',new E(),true,'v1');jobs.shift().resolve({mime:'text/html',base64:'AA=='});assert.equal(await bad,false,'invalid image payload rejected');
+// A persisted, versioned preview renders without waiting for Apps Script.
+const previewItem={fileId:'cached-news',updatedAt:'v3',title:'1',type:'news',mime:'image/png'};
+context.previewItem=previewItem;context.previewPayload=payload;
+vm.runInContext('savedPreviews[imageKey(previewItem,false)]=previewPayload;savedCards.news=[previewItem];publicImageCache.clear()',context);
+const cacheCalls=calls.length;context.restorePublicCards();await tick();
+assert.equal(calls.length,cacheCalls,'restored cards do not fetch preview again');
+assert.equal(ids.get('#newsCards').children[0].children[0].children[0].hidden,false);
+const newVersion=context.imageFor('cached-news',new E(),false,'v4');assert.equal(calls.length,cacheCalls+1,'updated Drive file bypasses old preview');jobs.shift().resolve(payload);await newVersion;
+saved.set('malformed',JSON.stringify({at:Date.now(),data:null}));assert.equal(Object.keys(context.readPublicCache('malformed')).length,0);
 let catalogs=0,release;context.api=()=>{catalogs++;return new Promise(r=>release=r)};
 const a=context.loadContent(),b=context.loadContent();assert.equal(catalogs,1,'content checks never overlap');release({items:[]});await Promise.all([a,b]);
 console.log('PASS: first-image priority, no empty image insertion, version cache, unchanged DOM, outages, failed replacement, retry, tab restore, deletion, request deduplication, payload validation, overlapping refresh');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
