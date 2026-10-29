@@ -32,6 +32,7 @@ const requests=calls.length;await context.restoreBannerCache();assert.equal(ids.
 await context.renderBanners([]);assert.equal(ids.get('#banners').children.length,0);assert.equal(saved.size,0,'confirmed deletion clears stored banner');
 const concurrent1=context.imageFor('C',new E(),true,'v1');const concurrent2=context.imageFor('C',new E(),true,'v1');
 assert.equal(calls.length,requests+1,'parallel duplicate requests share one response');jobs.shift().resolve(payload);await Promise.all([concurrent1,concurrent2]);
+const decoding=new E();decoding.loading='lazy';decoding.decode=()=>{assert.equal(decoding.loading,'eager','hidden image must load before decode');return Promise.resolve()};const decoded=context.imageFor('Decode',decoding,true,'v1');jobs.shift().resolve(payload);assert.equal(await decoded,true);assert.equal(decoding.hidden,false);
 const bad=context.imageFor('D',new E(),true,'v1');jobs.shift().resolve({mime:'text/html',base64:'AA=='});assert.equal(await bad,false,'invalid image payload rejected');
 let catalogs=0,release;context.api=()=>{catalogs++;return new Promise(r=>release=r)};
 const a=context.loadContent(),b=context.loadContent();assert.equal(catalogs,1,'content checks never overlap');release({items:[]});await Promise.all([a,b]);
