@@ -42,3 +42,6 @@ html,body{width:100%;min-width:0}body{overflow-wrap:break-word}main,.services-ma
 .contact-card>div+div{border-left:1px solid #dce9e7}
 .contact-card strong{font-size:18px}.contact-card p{margin:5px 0 0;font-size:15px}.contact-label{font-size:13px;color:#718e90;font-weight:bold}.contact-phones,.contact-email{font-size:16px;font-weight:bold}.contact-card a{color:#075d67;overflow-wrap:anywhere}.contact-card a:hover{text-decoration:underline}.contact-extra:empty{display:none}.contact-extra{margin:15px 0 0}
 @media(max-width:760px){.contact-card{grid-template-columns:1fr}.contact-card>div{padding:20px}.contact-card>div+div{border-left:0;border-top:1px solid #dce9e7}.contact-card strong{font-size:17px}}
+
+/* OSSC destination in the navigation brand slot. */
+.reference-nav .nav-brand.ossc-link{flex:0 0 235px;min-width:0;max-width:235px;padding:12px 16px;text-align:center;white-space:normal}.reference-nav .nav-brand.ossc-link strong{font-size:15px;line-height:1.55;overflow-wrap:break-word}.reference-nav .nav-brand.ossc-link small{font-size:13px;line-height:1.5}@media(max-width:760px){.reference-nav .nav-brand.ossc-link{flex:0 1 235px;max-width:calc(100% - 125px);padding:12px}.reference-nav .nav-brand.ossc-link strong{font-size:13px}}
