@@ -62,9 +62,9 @@ function auth_(session){if(typeof session!=='string'||!/^[a-f0-9]{64}$/i.test(se
 function permit_(u,module,op,category){if(u.role==='admin')return;if(u.role!=='staff'||!(module==='cases'?u.permissions.cases?.[category]?.[op]:u.permissions[module]?.[op]))throw Error('ไม่มีสิทธิ์ดำเนินการ')}
 function admin_(u){if(u.role!=='admin')throw Error('เฉพาะผู้ดูแลระบบ')}
 function case_(id){const c=rows_('Cases').find(c=>c.id===id&&!bool_(c.deleted));if(!c)throw Error('ไม่พบเรื่อง');return c}
-function accessCase_(u,c){if(u.sub===c.ownerSub)return;permit_(u,'cases','view',c.category)}
+function accessCase_(u,c){if(ownsCase_(u,c))return;permit_(u,'cases','view',c.category)}
 function updates_(id){return rows_('Updates').filter(x=>x.caseId===id)}function status_(id){const a=updates_(id);return a.length?a[a.length-1].status:STATUSES_[0]}
-function viewCase_(u,id,staff=false){const c=case_(text_(id,70,1));if(staff)permit_(u,'cases','view',c.category);else if(u.sub!==c.ownerSub)throw Error('ไม่มีสิทธิ์เข้าถึงเรื่องนี้');audit_(u,staff?'staff-read':'owner-read',id);const updates=updates_(id).map(x=>({at:x.at,status:x.status,note:x.note,files:JSON.parse(x.files||'[]'),links:JSON.parse(x.links||'[]'),...(staff?{internal:x.internal,actor:x.actor}:{})}));return {id:c.id,subject:c.subject,category:c.category,status:status_(id),updates,...(staff?{email:c.email,name:c.name,phone:c.phone,location:c.location,details:c.details,evidence:JSON.parse(c.evidence||'[]')}:{})}}
+function viewCase_(u,id,staff=false){const c=case_(text_(id,70,1));if(staff)permit_(u,'cases','view',c.category);else if(!ownsCase_(u,c))throw Error('ไม่มีสิทธิ์เข้าถึงเรื่องนี้ กรุณาใช้บัญชี Google เดียวกับที่ส่งแบบฟอร์ม');audit_(u,staff?'staff-read':'owner-read',id);const updates=updates_(id).map(x=>({at:x.at,status:x.status,note:x.note,files:JSON.parse(x.files||'[]'),links:JSON.parse(x.links||'[]'),...(staff?{internal:x.internal,actor:x.actor}:{})}));return {id:c.id,subject:c.subject,category:c.category,status:status_(id),updates,...(staff?{email:c.email,name:c.name,phone:c.phone,location:c.location,details:c.details,evidence:JSON.parse(c.evidence||'[]')}:{})}}
 function checkedFiles_(files){if(!Array.isArray(files)||files.length>3)throw Error('แนบได้ไม่เกิน 3 ไฟล์');return files.map(f=>{const name=text_(f.name,180,1),b64=text_(f.base64,7000000,1);let bytes;try{bytes=Utilities.base64Decode(b64)}catch(e){throw Error('ไฟล์ไม่ถูกต้อง')}if(bytes.length>5242880||!bytes.length)throw Error('ไฟล์เกิน 5 MB หรือไฟล์ว่าง');const b=i=>(bytes[i]+256)%256;let mime='';if(b(0)===255&&b(1)===216&&b(2)===255)mime='image/jpeg';else if([137,80,78,71,13,10,26,10].every((v,i)=>b(i)===v))mime='image/png';else if([37,80,68,70,45].every((v,i)=>b(i)===v))mime='application/pdf';if(!mime)throw Error('อนุญาตเฉพาะ JPG PNG PDF');return {name,mime,bytes}})}
 function storeFiles_(checked,module){const created=[];try{checked.forEach(x=>{const f=DriveApp.getFolderById(CONTENT_FOLDERS_[module]||cfg_().folders[module]).createFile(Utilities.newBlob(x.bytes,x.mime,x.name));created.push({id:f.getId(),name:x.name,mime:x.mime})});return created}catch(e){trash_(created);throw Error('บันทึกไฟล์ไม่ได้')}}function trash_(a){a.forEach(f=>{try{DriveApp.getFileById(f.id).setTrashed(true)}catch(e){}})}
 function submit_(u,d){if(!cfg_().privacyText||!cfg_().contact)throw Error('หน่วยงานยังไม่ได้เปิดรับเรื่อง กรุณารอการตั้งค่าข้อมูลติดต่อและประกาศความเป็นส่วนตัว');const requestId=text_(d.requestId,80,16),old=rows_('Cases').find(c=>c.requestId===requestId&&c.ownerSub===u.sub);if(old)return {id:old.id};if(rows_('Cases').filter(c=>c.ownerSub===u.sub&&thaiDay_(c.at)===thaiDay_(now_())).length>=10)throw Error('ส่งได้ไม่เกิน 10 เรื่องต่อวัน');const category=text_(d.category,100,1);if(!CATS_.includes(category)||d.acknowledge!==true)throw Error('ข้อมูลหมวดหรือการรับทราบไม่ถูกต้อง');const subject=text_(d.subject,200,1),details=text_(d.details,10000,20),location=text_(d.location,500,1),name=text_(d.name,120,1),phone=text_(d.phone,25,8);if(!/^[0-9+() -]{8,25}$/.test(phone))throw Error('โทรศัพท์ไม่ถูกต้อง');const checked=checkedFiles_(d.files||[]),created=storeFiles_(checked,'evidence');const id='NPT-'+Utilities.formatDate(new Date(),'Asia/Bangkok','yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,12).toUpperCase();let committed=false;try{add_('Cases',{id,requestId,ownerSub:u.sub,email:u.email,category,subject,details,location,name,phone,evidence:JSON.stringify(created),at:now_(),deleted:false});committed=true;add_('Updates',{id:Utilities.getUuid(),caseId:id,at:now_(),status:STATUSES_[0],note:'รับเรื่องแล้ว รอเจ้าหน้าที่ตรวจสอบ',internal:'',files:'[]',actor:'system',requestId:'intake-'+requestId});audit_(u,'submit',id);return {id}}catch(e){if(!committed)trash_(created);throw Error(committed?'ระบบรับข้อมูลแล้ว โปรดตรวจรายการก่อนส่งซ้ำ':'บันทึกไม่สำเร็จ')}}
@@ -143,7 +143,7 @@ function api(r){if(!r||typeof r.action!=='string')throw Error('คำขอไ�
  if(a==='me')return u;
  if(a==='logout')return lock_(()=>{const s=rows_('Sessions').find(s=>s.hash===hash_(r.session));if(s)replace_('Sessions',s._row,{...s,expiresAt:'1970-01-01T00:00:00Z'});return {ok:true}});
  if(a==='submit')return lock_(()=>submit_(u,d));
- if(a==='myCases')return rows_('Cases').filter(c=>c.ownerSub===u.sub&&!bool_(c.deleted)).reverse().map(c=>({id:c.id,subject:c.subject,status:status_(c.id),at:c.at}));
+ if(a==='myCases')return rows_('Cases').filter(c=>ownsCase_(u,c)&&!bool_(c.deleted)).reverse().map(c=>({id:c.id,subject:c.subject,status:status_(c.id),at:c.at}));
  if(a==='case')return viewCase_(u,d.id);
  if(a==='file'){allowedFile_(u,d.id);return filePayload_(d.id)}
  if(a==='staffCases'){const category=text_(d.category,100,1);if(!CATS_.includes(category))throw Error('เลือกหมวดก่อน');permit_(u,'cases','view',category);const search=String(d.search||'').toLowerCase().slice(0,200),page=Math.max(1,Math.floor(Number(d.page)||1));const all=rows_('Cases').filter(c=>!bool_(c.deleted)&&c.category===category&&(!search||[c.id,c.subject].some(v=>String(v).toLowerCase().includes(search)))).reverse();audit_(u,'staff-list',category);return {items:all.slice((page-1)*20,page*20).map(c=>({id:c.id,subject:c.subject,status:status_(c.id)})),more:page*20<all.length}}
@@ -160,3 +160,122 @@ function api(r){if(!r||typeof r.action!=='string')throw Error('คำขอไ�
  throw Error('ไม่พบคำสั่ง');
 }
 
+
+// The public responder URL and the editor ID are different identifiers.
+const COMPLAINT_FORM_URL_ = 'https://docs.google.com/forms/d/e/1FAIpQLSeaj2NfthrpLxmh06WKIizhdC0b5TrD2lL4ANSTI-FDa4eJSA/viewform';
+
+function complaintFormsGet_(path) {
+  const response = UrlFetchApp.fetch('https://forms.googleapis.com/v1/' + path, {
+    headers: {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()},
+    muteHttpExceptions: true,
+    followRedirects: false
+  });
+  if (response.getResponseCode() !== 200) {
+    throw Error('อ่าน Google Forms ไม่สำเร็จ กรุณาตรวจสิทธิ์และการเปิดใช้ Google Forms API');
+  }
+  return JSON.parse(response.getContentText());
+}
+
+function complaintForm_(id) {
+  const form = complaintFormsGet_('forms/' + encodeURIComponent(id));
+  const responderUrl = String(form.responderUri || '').split(/[?#]/)[0].replace(/\/+$/, '');
+  if (form.formId !== id || responderUrl !== COMPLAINT_FORM_URL_) {
+    throw Error('รหัสฟอร์มไม่ตรงกับแบบฟอร์มร้องเรียนบนเว็บไซต์');
+  }
+  if (form.settings?.emailCollectionType !== 'VERIFIED') {
+    throw Error('กรุณาตั้งค่าเก็บอีเมลแบบยืนยันแล้วใน Google Forms');
+  }
+  return form;
+}
+
+// Run once from the Apps Script editor as the system owner.
+function installComplaintFormTrigger() {
+  const owner = cfg_().adminEmail;
+  if (Session.getActiveUser().getEmail().toLowerCase() !== owner ||
+      Session.getEffectiveUser().getEmail().toLowerCase() !== owner) {
+    throw Error('รันการติดตั้งด้วยบัญชีผู้ดูแลหลัก');
+  }
+  const formId = prop_().getProperty('COMPLAINT_FORM_ID') || '';
+  if (!/^[A-Za-z0-9_-]+$/.test(formId)) throw Error('กรุณาตั้ง COMPLAINT_FORM_ID');
+  complaintForm_(formId);
+
+  return lock_(() => {
+    const installed = ScriptApp.getProjectTriggers().some(trigger =>
+      trigger.getHandlerFunction() === 'receiveComplaintForm' &&
+      trigger.getTriggerSourceId() === formId);
+    if (!installed) ScriptApp.newTrigger('receiveComplaintForm').forForm(formId).onFormSubmit().create();
+    return 'ติดตั้งการรับเรื่องจาก Google Forms แล้ว';
+  });
+}
+
+function receiveComplaintForm(event) {
+  const formId = prop_().getProperty('COMPLAINT_FORM_ID');
+  if (!formId || event?.source?.getId() !== formId) throw Error('เหตุการณ์มาจากฟอร์มอื่น');
+  const responseId = event.response?.getId();
+  if (!responseId) throw Error('ไม่มีรหัสคำตอบ');
+
+  const form = complaintForm_(formId);
+  const response = complaintFormsGet_('forms/' + encodeURIComponent(formId) +
+    '/responses/' + encodeURIComponent(responseId));
+  const email = String(response.respondentEmail || '').trim().toLowerCase();
+  if (response.responseId !== responseId || response.formId !== formId ||
+      email !== String(event.response.getRespondentEmail() || '').trim().toLowerCase() ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw Error('ไม่พบอีเมลผู้ส่งแบบฟอร์มที่ตรงกัน');
+  }
+  return lock_(() => saveComplaintForm_(form, response, email));
+}
+
+function saveComplaintForm_(form, response, email) {
+  const requestId = 'form:' + hash_(form.formId + ':' + response.responseId);
+  const existing = rows_('Cases').find(c => !c.ownerSub && c.requestId === requestId);
+  if (existing) return {id: existing.id};
+
+  const answers = response.answers || {};
+  const details = [];
+  const files = [];
+  let category = '';
+  let subject = '';
+  let name = '';
+  let phone = '';
+  let location = '';
+  for (const item of form.items || []) {
+    const title = String(item.title || '').trim();
+    const questions = item.questionItem ? [item.questionItem.question] : item.questionGroupItem?.questions || [];
+    for (const question of questions) {
+      const answer = answers[question.questionId];
+      const value = (answer?.textAnswers?.answers || []).map(a => a.value).join(', ').trim();
+      if (value) {
+        const label = question.rowQuestion?.title ? title + ' / ' + question.rowQuestion.title : title;
+        details.push(label + ': ' + value);
+        if (CATS_.includes(value) && /ประเภท|หมวด/.test(title)) category ||= value;
+        if (/หัวข้อ|ชื่อเรื่อง/.test(title)) subject ||= value;
+        if (/ชื่อ.*ผู้ร้อง|ชื่อ[\s-]*นามสกุล/.test(title)) name ||= value;
+        if (/โทรศัพท์|เบอร์โทร/.test(title)) phone ||= value;
+        if (/สถานที่เกิดเหตุ/.test(title)) location ||= value;
+      }
+      for (const file of answer?.fileUploadAnswers?.answers || []) {
+        if (file.fileId) files.push({id: file.fileId, name: file.fileName || 'ไฟล์แนบ', mime: file.mimeType || ''});
+      }
+    }
+  }
+
+  const now = new Date();
+  const id = 'NPT-' + Utilities.formatDate(now, 'Asia/Bangkok', 'yyyyMMdd') + '-' +
+    Utilities.getUuid().replace(/-/g, '').slice(0, 12).toUpperCase();
+  add_('Cases', {
+    id, requestId, ownerSub: '', email, category: category || 'อื่น ๆ',
+    subject: (subject || 'เรื่องร้องเรียนจาก Google Forms').slice(0, 200),
+    details: details.join('\n').slice(0, 45000),
+    location: location.slice(0, 500), name: name.slice(0, 120), phone: phone.slice(0, 100),
+    evidence: JSON.stringify(files), at: response.createTime || now.toISOString(), deleted: false
+  });
+  audit_({email}, 'form-intake', id);
+  return {id};
+}
+
+function ownsCase_(user, record) {
+  if (record.ownerSub) return user.sub === record.ownerSub;
+  return /^form:[a-f0-9]{64}$/.test(record.requestId) &&
+    !!user.email && user.email.toLowerCase() === String(record.email).toLowerCase();
+}

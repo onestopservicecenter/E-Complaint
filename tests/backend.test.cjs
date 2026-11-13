@@ -10,11 +10,56 @@ const citizen=login({sub:'citizen-a',email:'citizen@gmail.com',email_verified:tr
 const c=call(citizen.session,'submit',body);assert.equal(call(citizen.session,'submit',body).id,c.id);assert.equal(call(citizen.session,'myCases').length,1);assert.equal(call(other.session,'myCases').length,0);assert.throws(()=>call(other.session,'case',{id:c.id}),/ไม่มีสิทธิ์/);const ownerView=call(citizen.session,'case',{id:c.id});assert.equal(ownerView.updates[0].internal,undefined);assert.equal(ownerView.email,undefined);
 assert.throws(()=>call(citizen.session,'saveContent',{type:'news',title:'Fake',body:'',link:'',published:true}),/ไม่มีสิทธิ์/);
 call(admin.session,'saveStaff',{email:'staff@gmail.com',displayName:'Staff',active:true,permissions:{cases:{'อาหาร':{view:true,upload:true,addLink:true}},news:{view:true,add:true}}});const staff=login({sub:'staff-sub',email:'staff@gmail.com',name:'Staff',email_verified:true});assert.equal(staff.user.role,'staff');assert.throws(()=>call(staff.session,'staffCases',{category:''}),/ข้อมูลไม่ถูกต้อง/);assert.throws(()=>call(staff.session,'staffCases',{category:'ยา'}),/ไม่มีสิทธิ์/);assert.equal(call(staff.session,'staffCases',{category:'อาหาร'}).items.length,1);
+// Form intake uses Google-collected identity and preserves existing case ownership.
+const formId = 'test-form';
+const responseId = 'test-response';
+const form = {
+  formId,
+  responderUri: vm.runInContext('COMPLAINT_FORM_URL_', ctx),
+  settings: {emailCollectionType: 'VERIFIED'},
+  items: [{title: 'ประเภทเรื่องร้องเรียน', questionItem: {question: {questionId: 'category'}}}]
+};
+const formResponse = {
+  formId, responseId, respondentEmail: 'citizen@gmail.com',
+  answers: {category: {textAnswers: {answers: [{value: 'อาหาร'}]}}}
+};
+props.set('COMPLAINT_FORM_ID', formId);
+const originalFetch = ctx.UrlFetchApp.fetch;
+ctx.ScriptApp = {getOAuthToken: () => 'mock-token'};
+ctx.UrlFetchApp.fetch = (url, options) => {
+  if (!url.startsWith('https://forms.googleapis.com/')) return originalFetch(url, options);
+  assert.equal(options.headers.Authorization, 'Bearer mock-token');
+  const data = url.includes('/responses/') ? formResponse : form;
+  return {getResponseCode: () => 200, getContentText: () => JSON.stringify(data)};
+};
+const formEvent = {
+  source: {getId: () => formId},
+  response: {getId: () => responseId, getRespondentEmail: () => 'Citizen@gmail.com'}
+};
+form.settings.emailCollectionType = 'RESPONDER_INPUT';
+assert.throws(() => ctx.receiveComplaintForm(formEvent), /ยืนยันแล้ว/);
+form.settings.emailCollectionType = 'VERIFIED';
+assert.throws(() => ctx.receiveComplaintForm({...formEvent, source: {getId: () => 'wrong-form'}}), /ฟอร์มอื่น/);
+const imported = ctx.receiveComplaintForm(formEvent);
+assert.equal(ctx.receiveComplaintForm(formEvent).id, imported.id);
+assert.equal(call(citizen.session, 'myCases').filter(x => x.id === imported.id).length, 1);
+assert.equal(call(citizen.session, 'case', {id: imported.id}).category, 'อาหาร');
+assert.throws(() => call(other.session, 'case', {id: imported.id}), /ไม่มีสิทธิ์/);
+assert.equal(call(staff.session, 'staffCase', {id: imported.id}).email, 'citizen@gmail.com');
+assert.throws(() => call('', 'case', {id: imported.id}), /เข้าสู่ระบบ/);
+const formReply = {id: imported.id, requestId: crypto.randomUUID(), status: 'รับเรื่องแล้ว',
+  note: 'เอกสารตอบกลับ', files: [png]};
+call(staff.session, 'reply', formReply);
+const formFile = call(citizen.session, 'case', {id: imported.id}).updates[0].files[0].id;
+assert.equal(call(citizen.session, 'file', {id: formFile}).mime, 'image/png');
+assert.throws(() => call(other.session, 'file', {id: formFile}), /ไม่มีสิทธิ์/);
+ctx.UrlFetchApp.fetch = originalFetch;
+console.log('PASS: verified Form intake, source validation, deduplication, and same-email access');
 const reply={id:c.id,requestId:crypto.randomUUID(),status:'รับเรื่องแล้ว',note:'แนบหลักฐานตอบกลับ',internal:'',files:[png],links:[{title:'ข้อมูล',url:'https://example.org/'}]};call(staff.session,'reply',reply);call(staff.session,'reply',reply);assert.equal(call(citizen.session,'case',{id:c.id}).updates.length,2);assert.throws(()=>call(staff.session,'reply',{...reply,requestId:crypto.randomUUID(),status:'ยุติเรื่อง'}),/ไม่มีสิทธิ์/);const fid=call(citizen.session,'case',{id:c.id}).updates[1].files[0].id;assert.equal(call(citizen.session,'file',{id:fid}).mime,'image/png');assert.throws(()=>call(other.session,'file',{id:fid}),/ไม่มีสิทธิ์/);assert.throws(()=>call(staff.session,'deleteCase',{id:c.id}),/ไม่มีสิทธิ์/);
 const news=call(staff.session,'saveContent',{type:'news',title:'ข่าวทดสอบ',body:'เนื้อหา',link:'',published:false,file:png});assert.equal(call('','catalog').items.length,0);assert.throws(()=>call('','publicFile',{id:[...files.keys()].at(-1)}),/ไม่พบ/);assert.throws(()=>call(staff.session,'saveContent',{id:news.id,type:'news',title:'แก้ไข',body:'',link:'',published:true}),/ไม่มีสิทธิ์/);assert.throws(()=>call(staff.session,'saveContent',{type:'banner',title:'ไม่มีสิทธิ์',body:'',link:'',published:true,file:png}),/ไม่มีสิทธิ์/);
 call(admin.session,'saveContent',{id:news.id,type:'news',title:'ข่าวเผยแพร่',body:'เนื้อหา',link:'',published:true});assert.equal(call('','catalog').items.length,1);const pubid=call('','catalog').items[0].fileId;assert.equal(call('','publicImage',{id:pubid}).mime,'image/png');call(admin.session,'deleteContent',{id:news.id});assert.equal(call('','catalog').items.length,0);assert.throws(()=>call('','publicFile',{id:pubid}),/ไม่พบ/);
 call(admin.session,'saveStaff',{email:'staff@gmail.com',displayName:'Staff',active:false,permissions:{}});assert.throws(()=>call(staff.session,'staffCases',{category:'อาหาร'}),/ไม่มีสิทธิ์/);assert.throws(()=>call(admin.session,'saveContent',{type:'banner',title:'fake',body:'',link:'',published:true,file:{name:'fake.png',base64:Buffer.from('<script>').toString('base64')}}),/อนุญาตเฉพาะ/);
-call(admin.session,'deleteCase',{id:c.id});assert.equal(call(citizen.session,'myCases').length,0);assert.throws(()=>call(citizen.session,'file',{id:fid}),/ไม่มีสิทธิ์/);call(citizen.session,'logout');assert.throws(()=>call(citizen.session,'myCases'),/หมดเวลา/);
+call(admin.session,'deleteCase',{id:c.id});assert(!call(citizen.session,'myCases').some(record=>record.id===c.id));assert.throws(()=>call(citizen.session,'file',{id:fid}),/ไม่มีสิทธิ์/);call(citizen.session,'logout');assert.throws(()=>call(citizen.session,'myCases'),/หมดเวลา/);
 assert.throws(()=>login({sub:'bad',email:'bad@gmail.com',email_verified:false}),/ยืนยัน/);assert.throws(()=>call('','completeLogin',{state:'a'.repeat(64),browserKey:'b'.repeat(70),code:'fake'}),/หมดอายุ/);
 console.log('PASS: Google code exchange mock, one-time login state, immutable owner binding, private tracking, category rights, upload/link-only staff, no status change without edit, content module separation, public draft denial, session logout, disabled staff, file signatures and soft deletion');
 
