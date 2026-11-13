@@ -184,3 +184,8 @@ body:has(#track:not([hidden])) .agency-shortcuts {
   max-width: 960px;
   margin-inline: auto;
 }
+
+/* Keep the agency header in view when opening the tracking anchor. */
+#track {
+  scroll-margin-top: 280px;
+}
