@@ -86,8 +86,22 @@ html,body{width:100%;min-width:0}body{overflow-wrap:break-word}main,.services-ma
   .news-survey-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-  .survey-qr-card {
+  .public-service-links {
     width: min(100%, 320px);
     margin-inline: auto;
   }
+}
+
+.public-service-links {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.public-service-links p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.public-service-links .button {
+  margin-top: 10px;
 }
