@@ -27,9 +27,16 @@
 .complaint-entry-card .complaint-entry-button{display:block;width:100%;max-width:260px;box-sizing:border-box;margin:0 auto;border-radius:6px;background:#0869b4;color:#fff;padding:11px 12px;text-align:center;font-weight:600}
 .complaint-entry-card .complaint-entry-button:hover{background:#034b8d;color:#fff}
 .complaint-entry-card .complaint-entry-button:focus-visible{outline:3px solid #3e9dff;outline-offset:3px}
+</style><style>
+/* Existing selection-card theme: nested complaint choices. */
+.complaint-subcard-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}
+.complaint-subcard{display:flex;align-items:center;justify-content:center;min-height:62px;text-align:center;padding:14px 12px;border:1px solid #cfdeed;border-radius:12px;background:#f6faff;color:#075da8;font-weight:600;font-size:14px;line-height:1.5;text-decoration:none}
+.complaint-subcard:hover{background:#e6f3ff;border-color:#0869b4;color:#034b8d}
+.complaint-subcard:focus-visible{outline:3px solid #2196f3;outline-offset:3px}
+@media(max-width:600px){.complaint-subcard-list{grid-template-columns:1fr}}
 </style></head><body><header class="agency-header"><a class="agency-brand" href="#home"><img src="assets/fda-logo.svg" alt="ตราสัญลักษณ์สำนักงานคณะกรรมการอาหารและยา" width="80" height="80"><span><strong>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข</strong><small>สำนักงานสาธารณสุขจังหวัดนครปฐม</small></span></a><div class="agency-header-right"><nav class="agency-shortcuts" aria-label="เมนูส่วนหัว"><a href="#home">หน้าหลัก</a><a href="#contactSection">ติดต่อเรา</a><a class="staff-shortcut" href="staff.html">สำหรับเจ้าหน้าที่</a></nav><div class="header-account"><span id="identity"></span><button id="login">เข้าสู่ระบบด้วย Google</button><button id="logout" class="hidden">ออกจากระบบ</button></div></div></header>
 <div id="home"></div><section id="bannerSection" class="banner-wrap feature-banner" aria-label="แบนเนอร์ประชาสัมพันธ์"><div id="banners"></div><p id="bannerStatus" role="status">กำลังโหลดแบนเนอร์…</p><div class="slide-controls"><button id="prevBanner" aria-label="แบนเนอร์ก่อนหน้า">‹</button><span id="bannerCount"></span><button id="nextBanner" aria-label="แบนเนอร์ถัดไป">›</button></div></section>
-<header class="reference-nav"><a class="nav-brand ossc-link" href="https://onestopservicecenter.github.io/NakhonPathom/" target="_blank" rel="noopener noreferrer" aria-label="ศูนย์บริการสุขภาพผลิตภัณฑ์สุขภาพเบ้ดเสร็จ (OSSC)"><strong>ศูนย์บริการสุขภาพผลิตภัณฑ์สุขภาพเบ้ดเสร็จ <small>(OSSC)</small></strong></a><button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav">☰ เมนู</button><nav id="mainNav" aria-label="เมนูหลัก"><a href="#home">หน้าแรก</a><a href="#track">สำหรับผู้ร้องเรียน</a><a href="#complaint">แจ้งเรื่อง / ขอรับบริการ</a><a href="https://forms.gle/mLvxgx5db13swgfh6" target="_blank" rel="noopener noreferrer">แบบประเมินความพึงพอใจของผู้รับบริการ</a><a href="staff.html">สำหรับเจ้าหน้าที่</a><a href="#contactSection">ติดต่อเรา</a></nav></header>
+<header class="reference-nav"><a class="nav-brand ossc-link" href="https://onestopservicecenter.github.io/NakhonPathom/" target="_blank" rel="noopener noreferrer" aria-label="ศูนย์บริการสุขภาพผลิตภัณฑ์สุขภาพเบ้ดเสร็จ (OSSC)"><strong>ศูนย์บริการสุขภาพผลิตภัณฑ์สุขภาพเบ้ดเสร็จ <small>(OSSC)</small></strong></a><button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav">☰ เมนู</button><nav id="mainNav" aria-label="เมนูหลัก"><a href="#home">หน้าแรก</a><a href="#track">สำหรับผู้ร้องเรียน</a><a href="#complaint">แจ้งข้อร้องเรียน</a><a href="https://forms.gle/mLvxgx5db13swgfh6" target="_blank" rel="noopener noreferrer">แบบประเมินความพึงพอใจของผู้รับบริการ</a><a href="staff.html">สำหรับเจ้าหน้าที่</a><a href="#contactSection">ติดต่อเรา</a></nav></header>
 
 <main><section id="news" class="section news-section"><div class="section-heading"><h2>ข่าวประชาสัมพันธ์</h2><span class="heading-rule"></span></div><div class="news-survey-layout">
   <aside class="public-service-links" aria-label="บริการสำหรับประชาชน">
@@ -40,7 +47,7 @@
     </section>
     <section class="survey-qr-card complaint-entry-card" aria-labelledby="quickComplaintTitle">
       <svg class="complaint-entry-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"></rect><rect x="9" y="2" width="6" height="4" rx="1"></rect><path d="M9 10h6M9 14h6M9 18h4"></path></svg>
-      <h3 id="quickComplaintTitle">แจ้งเรื่อง / ขอรับบริการ</h3>
+      <h3 id="quickComplaintTitle">แจ้งข้อร้องเรียน</h3>
       <a class="button complaint-entry-button" href="#complaint">เลือกประเภทการแจ้งเรื่อง</a>
     </section>
     <section class="survey-qr-card" aria-labelledby="quickTrackingTitle">
@@ -70,32 +77,30 @@
 </section></main>
 <section id="alerts" class="alerts-section"><div class="section"><div class="section-heading"><h2>ข่าวเตือนภัย</h2><span class="heading-rule"></span><div class="alert-controls"><button id="prevAlert" aria-label="ข่าวเตือนภัยก่อนหน้า">‹</button><button id="nextAlert" aria-label="ข่าวเตือนภัยถัดไป">›</button></div></div><div id="alertCards" class="news-grid alert-grid"><p class="empty">กำลังโหลดข่าวเตือนภัย…</p></div></div></section><main class="services-main"><section id="complaint" class="section panel complaint-choice-page" aria-labelledby="complaintChoiceTitle">
   <div class="complaint-choice-heading">
-    <h2 id="complaintChoiceTitle">แจ้งเรื่อง / ขอรับบริการ</h2>
-    <p>กรุณาเลือกประเภทให้ตรงกับเรื่องที่ต้องการแจ้ง</p>
+    <h2 id="complaintChoiceTitle">แจ้งข้อร้องเรียน</h2>
   </div>
   <div class="complaint-choice-list">
     <article class="complaint-choice-card">
-      <div class="complaint-choice-icon surveillance-icon" aria-hidden="true">♢</div>
+      <div class="complaint-choice-icon report-icon" aria-hidden="true">!</div>
       <div class="complaint-choice-content">
-        <h3>01 เฝ้าระวัง</h3>
-        <p>แจ้งเบาะแสหรือสิ่งผิดปกติที่อาจเป็นความเสี่ยงต่อสุขภาพ เช่น ผลิตภัณฑ์หรือสถานประกอบการที่น่าสงสัย</p>
-        <span class="complaint-choice-pending">แบบฟอร์มเฝ้าระวังอยู่ระหว่างเชื่อมต่อ</span>
+        <h3>1 ร้องเรียน</h3>
+        <p>ร้องเรียนผลิตภัณฑ์สุขภาพ/สถานประกอบการ</p>
+        <div class="complaint-subcard-list">
+          <a class="complaint-subcard" href="https://docs.google.com/forms/d/e/1FAIpQLSeaj2NfthrpLxmh06WKIizhdC0b5TrD2lL4ANSTI-FDa4eJSA/viewform" target="_blank" rel="noopener noreferrer">ประสงค์ขอรับเงินสินบนนำจับ</a>
+          <a class="complaint-subcard" href="https://docs.google.com/forms/d/e/1FAIpQLSeaj2NfthrpLxmh06WKIizhdC0b5TrD2lL4ANSTI-FDa4eJSA/viewform" target="_blank" rel="noopener noreferrer">ไม่ประสงค์ขอรับเงินสินบนนำจับ</a>
+        </div>
       </div>
     </article>
     <article class="complaint-choice-card">
-      <div class="complaint-choice-icon report-icon" aria-hidden="true">!</div>
+      <div class="complaint-choice-icon surveillance-icon" aria-hidden="true">♢</div>
       <div class="complaint-choice-content">
-        <h3>02 ร้องเรียน</h3>
-        <p>ร้องเรียนปัญหาจากผลิตภัณฑ์สุขภาพ สถานประกอบการ หรือการโฆษณาที่อาจไม่ถูกต้อง</p>
-        <a class="complaint-choice-action" href="https://docs.google.com/forms/d/e/1FAIpQLSeaj2NfthrpLxmh06WKIizhdC0b5TrD2lL4ANSTI-FDa4eJSA/viewform" target="_blank" rel="noopener noreferrer">เลือกประเภทร้องเรียน → เปิดแบบฟอร์มร้องเรียน <span aria-hidden="true">↗</span></a>
+        <h3>2 แจ้งตรวจสอบมาตรฐานผลิตภัณฑ์/สถานประกอบการ</h3>
       </div>
     </article>
     <article class="complaint-choice-card">
       <div class="complaint-choice-icon service-icon" aria-hidden="true">☏</div>
       <div class="complaint-choice-content">
-        <h3>03 บริการ</h3>
-        <p>ติดต่อขอรับบริการ สอบถามข้อมูล หรือขอคำแนะนำเกี่ยวกับงานคุ้มครองผู้บริโภคด้านสุขภาพ</p>
-        <span class="complaint-choice-pending">แบบฟอร์มบริการอยู่ระหว่างเชื่อมต่อ</span>
+        <h3>3 ร้องเรียนการบริการ OSSC</h3>
       </div>
     </article>
   </div>
