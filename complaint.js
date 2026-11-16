@@ -12,11 +12,17 @@
   let enabled = false;
   let requestId = uid();
   let submitting = false;
+  const choiceLink = $('#complaintChoiceLink');
+  const originalLink = choiceLink.href;
 
   CATEGORIES.forEach(category => $('#complaintCategory').add(new Option(category, category)));
 
   function render() {
     $('#complaintFallback').hidden = enabled;
+    $('#surveillancePending').hidden = enabled;
+    $('#surveillanceLink').hidden = !enabled;
+    choiceLink.href = enabled ? '#intake' : originalLink;
+    choiceLink.target = enabled ? '_self' : '_blank';
     $('#complaintLogin').classList.toggle('hidden', !enabled || !!user);
     form.classList.toggle('hidden', !enabled || !user);
     $('#complaintEmail').textContent = user?.email || '';
@@ -64,6 +70,15 @@
       if (!state.fileId && !state.committed && state.offset <= offset) throw Error('การอัปโหลดหยุดลง กรุณากดส่งอีกครั้ง');
     }
   }
+
+  function selectRoute() {
+    if (location.hash === '#intake?type=monitor') {
+      field('prosecution').value = 'monitor';
+      updateReward();
+    }
+  }
+  window.addEventListener('hashchange', selectRoute);
+  selectRoute();
 
   document.addEventListener('catalog-ready', event => {
     enabled = !!(cfg.googleClientId && event.detail.publicIntake);

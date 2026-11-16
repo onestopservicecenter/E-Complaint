@@ -250,7 +250,7 @@ function intakeFileChunk_(u, d) {
   return {base64: Utilities.base64Encode(bytes)};
 }
 
-function purgeExpiredComplaintDrafts() {
+function purgeExpiredComplaintDrafts_() {
   return lock_(() => {
     const admin = cfg_().adminEmail;
     if (Session.getEffectiveUser().getEmail().toLowerCase() !== admin) throw Error('เฉพาะผู้ดูแลระบบ');
@@ -262,5 +262,17 @@ function purgeExpiredComplaintDrafts() {
       replace_('PublicIntake', row._row, {...row, folderId: '', uploads: '{}', info: '', restricted: ''});
     });
     return drafts.length;
+  });
+}
+
+function installComplaintDraftCleanup() {
+  const admin = cfg_().adminEmail;
+  if (Session.getActiveUser().getEmail().toLowerCase() !== admin ||
+      Session.getEffectiveUser().getEmail().toLowerCase() !== admin) throw Error('เฉพาะผู้ดูแลระบบ');
+  return lock_(() => {
+    const handler = 'purgeExpiredComplaintDrafts_';
+    if (!ScriptApp.getProjectTriggers().some(trigger => trigger.getHandlerFunction() === handler)) {
+      ScriptApp.newTrigger(handler).timeBased().everyDays(1).create();
+    }
   });
 }
