@@ -140,7 +140,7 @@ function startComplaint(input) {
 function uploadEvidence(input) {
   const email=identity_(input&&input.idToken), id=cleaned_(input.caseId,50);
   const kind=cleaned_(input.kind,30),b64=String(input.base64||'');
-  const kinds=['image','video','identityCard',...REQUIRED_REWARD_DOCS];
+  const kinds=['image','video','identityCard','evidence',...REQUIRED_REWARD_DOCS];
   if(!kinds.includes(kind)) throw Error('ชนิดไฟล์ไม่ถูกต้อง');
   const mime=cleaned_(input.mime,100).toLowerCase();
   const maxBytes=10*1024*1024;
@@ -154,10 +154,16 @@ function uploadEvidence(input) {
   const isJPG=first.slice(0,3).join(',')==='255,216,255';
   const isWEBP=String.fromCharCode(...first.slice(0,4))==='RIFF' && String.fromCharCode(...first.slice(8,12))==='WEBP';
   const isMP4=String.fromCharCode(...first.slice(4,8))==='ftyp';
+  const isWAV=String.fromCharCode(...first.slice(0,4))==='RIFF' && String.fromCharCode(...first.slice(8,12))==='WAVE';
+  const isMP3=first.slice(0,3).join(',')==='73,68,51'||(first[0]===255&&(first[1]&224)===224);
+  const isOGG=String.fromCharCode(...first.slice(0,4))==='OggS';
   const imageValid=(mime==='image/jpeg'&&isJPG)||(mime==='image/png'&&isPNG)||(mime==='image/webp'&&isWEBP);
   const videoValid=mime==='video/mp4'&&isMP4;
-  if(kind==='identityCard' ? !imageValid : kind==='image' ? !imageValid : kind==='video' ? !videoValid : !(mime==='application/pdf'&&isPDF))
-    throw Error('รูปแบบไฟล์ไม่ตรงตามที่กำหนด');
+  const documentValid=mime==='application/pdf'&&isPDF;
+  const audioValid=(mime==='audio/mpeg'&&isMP3)||(mime==='audio/wav'&&isWAV)||(mime==='audio/ogg'&&isOGG);
+  const valid=kind==='identityCard'||kind==='image'?imageValid:
+    kind==='video'?videoValid:kind==='evidence'?(imageValid||videoValid||documentValid||audioValid):documentValid;
+  if(!valid) throw Error('รูปแบบไฟล์ไม่ตรงตามที่กำหนด');
   const lock=LockService.getScriptLock();lock.waitLock(30000);
   try {
     assertPrivateFolders_();
@@ -165,9 +171,10 @@ function uploadEvidence(input) {
     if(row[3]!==email||row[10]!=='DRAFT') throw Error('ไม่สามารถเพิ่มหลักฐานให้เรื่องนี้ได้');
     if(kind!=='image'&&kind!=='video'&&row[2]!=='reward') throw Error('ไม่มีสิทธิ์แนบเอกสารสินบนนำจับ');
     const uploads=JSON.parse(row[13]||'{}'),arr=uploads[kind]||[];
-    if(arr.length>=(kind==='image'?5:1)) throw Error('จำนวนไฟล์ชนิดนี้ครบแล้ว');
-    const extension=(kind==='image'||kind==='identityCard')?(mime==='image/png'?'png':mime==='image/webp'?'webp':'jpg'):
-      kind==='video'?'mp4':'pdf';
+    if(arr.length>=(kind==='image'||kind==='evidence'?5:1)) throw Error('จำนวนไฟล์ชนิดนี้ครบแล้ว');
+    const extByMime={'image/jpeg':'jpg','image/png':'png','image/webp':'webp',
+      'video/mp4':'mp4','application/pdf':'pdf','audio/mpeg':'mp3','audio/wav':'wav','audio/ogg':'ogg'};
+    const extension=extByMime[mime];
     const filename=kind+'-'+(arr.length+1)+'.'+extension;
     const folder=DriveApp.getFolderById(row[11]);
     const file=folder.createFile(Utilities.newBlob(bytes,mime,filename));
