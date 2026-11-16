@@ -12,7 +12,7 @@ const INTAKE = Object.freeze({
   SHEET_PROP: 'INTAKE_SPREADSHEET_ID',
   HEADERS: ['เลขรับเรื่อง','วันที่บันทึก','สินบนนำจับ','บัญชีผู้ยื่น','ชื่อผู้ยื่น','โทรศัพท์','เรื่อง','สถานที่','รายละเอียด','แจ้งผล','สถานะ','โฟลเดอร์','clientNonce','หลักฐาน_JSON']
 });
-const REQUIRED_REWARD_DOCS = ['NJ1','BANK_REQUEST','ID_COPY','BOOKBANK_COPY'];
+const REQUIRED_REWARD_DOCS = []; // The latest reward-intent form requires an identity-card image instead of four PDFs.
 
 function doGet(e) {
   const intent = (e && e.parameter && e.parameter.intent) === 'reward' ? 'reward' : 'no-reward';
@@ -93,9 +93,19 @@ function startComplaint(input) {
   const intent=exactIntent_(input.intent);
   const name=cleaned_(input.name,150),phone=cleaned_(input.phone,30),
     subject=cleaned_(input.subject,200),place=cleaned_(input.place,500),
-    details=cleaned_(input.details,8000),nationalId=cleaned_(input.nationalId,13);
+    details=cleaned_(input.details,8000),nationalId=cleaned_(input.nationalId,13),
+    age=cleaned_(input.age,3),issuer=cleaned_(input.issuer,250),
+    address=cleaned_(input.address,1000),contactAddress=cleaned_(input.contactAddress,1000),
+    altEmail=cleaned_(input.altEmail,255),lineId=cleaned_(input.lineId,100),
+    desiredAction=cleaned_(input.desiredAction,3000),eventDate=cleaned_(input.eventDate,20);
   if(!name||!subject||!place||!details||!phone) throw Error('กรุณากรอกข้อมูลจำเป็นให้ครบถ้วน');
-  if(intent==='reward' && !/^\d{13}$/.test(nationalId)) throw Error('กรุณากรอกเลขบัตรประชาชน 13 หลัก');
+  if(intent==='reward') {
+    if(!input.acceptTerms) throw Error('กรุณายอมรับข้อตกลงและหลักเกณฑ์');
+    if(!/^\d{13}$/.test(nationalId)) throw Error('กรุณากรอกเลขบัตรประชาชน 13 หลัก');
+    if(!address || !contactAddress || !issuer || !eventDate || !desiredAction) throw Error('กรุณากรอกข้อมูลร้องเรียนให้ครบถ้วน');
+    if(age && (!/^\d{1,3}$/.test(age)||Number(age)>120)) throw Error('อายุไม่ถูกต้อง');
+    if(altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) throw Error('รูปแบบอีเมลไม่ถูกต้อง');
+  }
   const nonce=cleaned_(input.nonce,80);
   if(!/^[a-f0-9-]{16,80}$/i.test(nonce)) throw Error('ข้อมูลคำขอไม่ถูกต้อง');
   const lock=LockService.getScriptLock();lock.waitLock(30000);
@@ -118,6 +128,8 @@ function startComplaint(input) {
     // Personal data is written only after permissions have been verified.
     const payload={caseId,createdAt:new Date().toISOString(),intent,email,name,phone,
       subject,place,details,nationalId:intent==='reward'?nationalId:null,
+      age,issuer,address,contactAddress,altEmail,lineId,desiredAction,eventDate,
+      acceptTerms:intent==='reward'?true:!!input.acceptTerms,
       wantsReply:input.wantsReply==='yes'};
     folder.createFile(Utilities.newBlob(JSON.stringify(payload,null,2),'application/json','คำร้อง.json'));
     sh.appendRow([caseId,new Date(),intent,email,sheetText_(name),sheetText_(phone),sheetText_(subject),sheetText_(place),sheetText_(details),
@@ -128,10 +140,10 @@ function startComplaint(input) {
 function uploadEvidence(input) {
   const email=identity_(input&&input.idToken), id=cleaned_(input.caseId,50);
   const kind=cleaned_(input.kind,30),b64=String(input.base64||'');
-  const kinds=['image','video',...REQUIRED_REWARD_DOCS];
+  const kinds=['image','video','identityCard',...REQUIRED_REWARD_DOCS];
   if(!kinds.includes(kind)) throw Error('ชนิดไฟล์ไม่ถูกต้อง');
   const mime=cleaned_(input.mime,100).toLowerCase();
-  const maxBytes=kind==='image'?5*1024*1024:kind==='video'?12*1024*1024:10*1024*1024;
+  const maxBytes=10*1024*1024;
   if(b64.length>Math.ceil(maxBytes*4/3)+16||!b64||!/^[A-Za-z0-9+/]+={0,2}$/.test(b64))
     throw Error('ไฟล์ใหญ่เกินขนาดที่กำหนด หรือไฟล์ไม่ถูกต้อง');
   const bytes=Utilities.base64Decode(b64);
@@ -142,8 +154,10 @@ function uploadEvidence(input) {
   const isJPG=first.slice(0,3).join(',')==='255,216,255';
   const isWEBP=String.fromCharCode(...first.slice(0,4))==='RIFF' && String.fromCharCode(...first.slice(8,12))==='WEBP';
   const isMP4=String.fromCharCode(...first.slice(4,8))==='ftyp';
-  if(kind==='image'?!((mime==='image/jpeg'&&isJPG)||(mime==='image/png'&&isPNG)||(mime==='image/webp'&&isWEBP)):
-     kind==='video'?!(mime==='video/mp4'&&isMP4):!(mime==='application/pdf'&&isPDF)) throw Error('รูปแบบไฟล์ไม่ตรงตามที่กำหนด');
+  const imageValid=(mime==='image/jpeg'&&isJPG)||(mime==='image/png'&&isPNG)||(mime==='image/webp'&&isWEBP);
+  const videoValid=mime==='video/mp4'&&isMP4;
+  if(kind==='identityCard' ? !imageValid : kind==='image' ? !imageValid : kind==='video' ? !videoValid : !(mime==='application/pdf'&&isPDF))
+    throw Error('รูปแบบไฟล์ไม่ตรงตามที่กำหนด');
   const lock=LockService.getScriptLock();lock.waitLock(30000);
   try {
     assertPrivateFolders_();
@@ -151,8 +165,8 @@ function uploadEvidence(input) {
     if(row[3]!==email||row[10]!=='DRAFT') throw Error('ไม่สามารถเพิ่มหลักฐานให้เรื่องนี้ได้');
     if(kind!=='image'&&kind!=='video'&&row[2]!=='reward') throw Error('ไม่มีสิทธิ์แนบเอกสารสินบนนำจับ');
     const uploads=JSON.parse(row[13]||'{}'),arr=uploads[kind]||[];
-    if(arr.length>=(kind==='image'?4:1)) throw Error('จำนวนไฟล์ชนิดนี้ครบแล้ว');
-    const extension=kind==='image'?(mime==='image/png'?'png':mime==='image/webp'?'webp':'jpg'):
+    if(arr.length>=(kind==='image'?5:1)) throw Error('จำนวนไฟล์ชนิดนี้ครบแล้ว');
+    const extension=(kind==='image'||kind==='identityCard')?(mime==='image/png'?'png':mime==='image/webp'?'webp':'jpg'):
       kind==='video'?'mp4':'pdf';
     const filename=kind+'-'+(arr.length+1)+'.'+extension;
     const folder=DriveApp.getFolderById(row[11]);
@@ -173,8 +187,8 @@ function finishComplaint(input) {
     if(row[10]==='SUBMITTED') return {caseId:id,status:'SUBMITTED'};
     if(row[10]!=='DRAFT') throw Error('สถานะเรื่องไม่ถูกต้อง');
     const files=JSON.parse(row[13]||'{}');
-    if(row[2]==='reward' && REQUIRED_REWARD_DOCS.some(k=>!files[k]||files[k].length!==1))
-      throw Error('กรุณาแนบ PDF เอกสารสินบนนำจับให้ครบทั้ง 4 รายการ');
+    if(row[2]==='reward' && (!files.identityCard || files.identityCard.length!==1))
+      throw Error('กรุณาแนบสำเนาบัตรประชาชน 1 รูป');
     sh.getRange(found.row,11).setValue('SUBMITTED');
     return {caseId:id,status:'SUBMITTED'};
   }finally{lock.releaseLock();}
