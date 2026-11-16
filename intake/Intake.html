@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="th"><head><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{--blue:#0869b4;--ink:#113a65;--border:#d6e4f1}*{box-sizing:border-box}
+body{font-family:Tahoma,"Noto Sans Thai",sans-serif;background:#f5f9ff;color:#163652;margin:0;padding:20px}
+main{max-width:860px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:18px;padding:clamp(18px,4vw,34px)}
+h1{font-size:clamp(24px,3vw,32px);text-align:center;color:var(--ink);margin:0 0 6px}
+h2{font-size:19px;color:var(--ink);margin:0 0 15px}
+.subtitle{text-align:center;color:#52687f;margin:0 0 26px}
+section{border:1px solid var(--border);border-radius:14px;padding:18px;margin-top:16px}
+label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+input,textarea,select{width:100%;border:1px solid #bcd0e1;border-radius:8px;padding:11px 12px;font:inherit;color:#173553;background:#fff}
+textarea{min-height:125px;resize:vertical}input:focus,textarea:focus{outline:2px solid #78baf6;outline-offset:1px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{margin-bottom:15px}.required{color:#bc2941}
+.help{font-size:12px;color:#60768b;line-height:1.6;margin-top:6px}
+button{font:inherit;background:var(--blue);border:0;color:white;border-radius:8px;padding:13px 22px;cursor:pointer;font-weight:700}
+button:hover{background:#064983}button:disabled{background:#89acc7;cursor:wait}
+.alert{padding:14px;border-radius:8px;background:#f0f5fa;border:1px solid #d1e3f2;margin-top:16px;line-height:1.7}
+.error{background:#fff2f3;border-color:#f3c3cd;color:#9d2037}.success{background:#e9f7ef;border-color:#b4e2c5;color:#18623c}
+.identity{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+ul{margin:5px 0 0;padding-left:22px}strong{font-weight:700}fieldset{border:0;padding:0;margin:0 0 15px}legend{font-weight:700;margin-bottom:10px}
+.choice{display:inline-flex;align-items:center;gap:7px;margin-right:20px;font-weight:400}.choice input{width:auto}
+#result[hidden],#formBody[hidden],#rewardDocs[hidden]{display:none}
+@media(max-width:560px){.grid{grid-template-columns:1fr}body{padding:8px}main{padding:15px}section{padding:14px}}
+</style></head><body>
+<main>
+<h1>แจ้งข้อร้องเรียน</h1>
+<p id="subtitle" class="subtitle"></p>
+<section aria-label="ยืนยันตัวตนด้วย Google">
+  <h2>เข้าสู่ระบบด้วยบัญชี Google</h2>
+  <div class="identity"><div id="googleButton"></div><strong id="identityText">ยังไม่ได้เข้าสู่ระบบ</strong></div>
+  <p class="help">ใช้บัญชี Google เพื่อระบุผู้ยื่นเรื่องและใช้ตรวจสอบข้อมูลที่ส่ง</p>
+</section>
+<form id="complaintForm" novalidate>
+<div id="formBody" hidden>
+<section>
+  <h2>ข้อมูลผู้ร้องเรียน</h2>
+  <div class="grid">
+    <div class="field"><label for="name">ชื่อ - นามสกุล <span class="required">*</span></label><input id="name" maxlength="150" required autocomplete="name"></div>
+    <div class="field"><label for="phone">โทรศัพท์ <span class="required">*</span></label><input id="phone" type="tel" maxlength="30" required autocomplete="tel"></div>
+  </div>
+  <div class="field" id="nationalIdField"><label for="nationalId">เลขบัตรประจำตัวประชาชน <span class="required">*</span></label><input id="nationalId" inputmode="numeric" pattern="[0-9]{13}" maxlength="13" autocomplete="off"><div class="help">กรอกเฉพาะกรณีประสงค์ขอรับเงินสินบนนำจับ</div></div>
+  <fieldset><legend>การแจ้งผลกลับ</legend><label class="choice"><input type="radio" name="wantsReply" value="yes" checked> ต้องการให้แจ้งผลกลับ</label><label class="choice"><input type="radio" name="wantsReply" value="no"> ไม่ต้องการให้แจ้งผลกลับ</label></fieldset>
+</section>
+<section>
+  <h2>รายละเอียดการร้องเรียน</h2>
+  <div class="field"><label for="subject">เรื่องที่ร้องเรียน <span class="required">*</span></label><input id="subject" required maxlength="200"></div>
+  <div class="field"><label for="place">ชื่อ/ที่ตั้งสถานประกอบการ หรือสถานที่เกิดเหตุ <span class="required">*</span></label><textarea id="place" required maxlength="500"></textarea></div>
+  <div class="field"><label for="details">รายละเอียดเรื่องร้องเรียน <span class="required">*</span></label><textarea id="details" required maxlength="8000"></textarea></div>
+</section>
+<section>
+  <h2>หลักฐานประกอบ</h2>
+  <div class="field"><label for="images">รูปภาพหลักฐาน 1–4 ภาพ <span class="required">*</span></label><input id="images" type="file" multiple required accept="image/jpeg,image/png,image/webp"><div class="help">JPG / PNG / WebP ไม่เกิน 5 MB ต่อภาพ</div></div>
+  <div class="field"><label for="video">วิดีโอประกอบ (ถ้ามี)</label><input id="video" type="file" accept="video/mp4"><div class="help">MP4 ไม่เกิน 12 MB</div></div>
+  <div id="rewardDocs" hidden>
+    <h2>เอกสารสำหรับขอรับเงินสินบนนำจับ</h2>
+    <div class="field"><label for="NJ1">แบบ น.จ.1 (PDF) <span class="required">*</span></label><input id="NJ1" type="file" accept="application/pdf"></div>
+    <div class="field"><label for="BANK_REQUEST">แบบคำขอรับเงินผ่านธนาคาร (PDF) <span class="required">*</span></label><input id="BANK_REQUEST" type="file" accept="application/pdf"></div>
+    <div class="field"><label for="ID_COPY">สำเนาบัตรประชาชน (PDF) <span class="required">*</span></label><input id="ID_COPY" type="file" accept="application/pdf"></div>
+    <div class="field"><label for="BOOKBANK_COPY">สำเนา Bookbank (PDF) <span class="required">*</span></label><input id="BOOKBANK_COPY" type="file" accept="application/pdf"></div>
+    <p class="help">เอกสาร PDF ไม่เกิน 10 MB ต่อไฟล์</p>
+  </div>
+</section>
+<section>
+  <label class="choice"><input id="consent" type="checkbox" required> ยืนยันว่าข้อมูลที่แจ้งเป็นความจริงและรับทราบว่าจะนำข้อมูลไปใช้เพื่อดำเนินการเกี่ยวกับเรื่องร้องเรียน</label>
+  <p class="help">โปรดตรวจสอบประกาศการคุ้มครองข้อมูลส่วนบุคคลของหน่วยงานก่อนเปิดใช้ระบบจริง</p>
+  <button id="send" type="submit">ส่งเรื่องร้องเรียน</button>
+</section>
+</div>
+</form>
+<div id="result" class="alert" role="status" aria-live="polite" hidden></div>
+</main>
+<script>
+const INTENT=<?= JSON.stringify(intent) ?>;
+const CLIENT_ID=<?= JSON.stringify(clientId) ?>;
+let idToken='',nonce=crypto.randomUUID(),caseId='';
+const $=id=>document.getElementById(id);
+$('subtitle').textContent=INTENT==='reward'?'ประสงค์ขอรับเงินสินบนนำจับ':'ไม่ประสงค์ขอรับเงินสินบนนำจับ';
+$('rewardDocs').hidden=INTENT!=='reward';
+$('nationalIdField').hidden=INTENT!=='reward';
+function report(message,mode=''){const d=$('result');d.hidden=false;d.textContent=message;d.className='alert '+mode;d.scrollIntoView({behavior:'smooth',block:'nearest'});}
+function callServer(method,data){return new Promise((resolve,reject)=>{google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[method](data);});}
+function signin(r){idToken=r.credential||'';const payload=idToken.split('.')[1];if(!payload){report('เข้าสู่ระบบไม่สำเร็จ','error');return;}
+try{const user=JSON.parse(atob(payload.replace(/-/g,'+').replace(/_/g,'/')));$('identityText').textContent=user.email||'เข้าสู่ระบบแล้ว';$('formBody').hidden=false;$('result').hidden=true;}catch{report('ไม่สามารถอ่านข้อมูลบัญชีได้','error');}}
+window.addEventListener('load',()=>{
+  if(CLIENT_ID.startsWith('SET_')){report('ระบบยังไม่เปิดรับเรื่อง: กรุณาให้เจ้าหน้าที่ตั้งค่า Google OAuth Client ID','error');return;}
+  if(!window.google?.accounts?.id){report('ไม่สามารถโหลด Google Login ได้ กรุณาเปิดใหม่','error');return;}
+  google.accounts.id.initialize({client_id:CLIENT_ID,callback:signin,auto_select:false});
+  google.accounts.id.renderButton($('googleButton'),{theme:'outline',size:'large',text:'signin_with'});
+});
+function checkFiles(){
+  const images=Array.from($('images').files);
+  if(images.length<1||images.length>4)throw Error('กรุณาเลือกภาพหลักฐาน 1–4 ภาพ');
+  if(images.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5*1024*1024))throw Error('ภาพต้องเป็น JPG/PNG/WebP และไม่เกิน 5 MB ต่อภาพ');
+  const v=$('video').files[0];
+  if(v&&(v.type!=='video/mp4'||v.size>12*1024*1024))throw Error('วิดีโอต้องเป็น MP4 ไม่เกิน 12 MB');
+  const files=images.map(f=>({kind:'image',file:f}));
+  if(v)files.push({kind:'video',file:v});
+  if(INTENT==='reward'){
+    for(const id of ['NJ1','BANK_REQUEST','ID_COPY','BOOKBANK_COPY']){
+      const f=$(id).files[0];
+      if(!f||f.type!=='application/pdf'||f.size>10*1024*1024)throw Error('กรุณาแนบ '+$(id).labels[0].textContent+' ขนาดไม่เกิน 10 MB');
+      files.push({kind:id,file:f});
+    }
+  }
+  return files;
+}
+function encode(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(Error('อ่านไฟล์ไม่สำเร็จ'));r.onload=()=>resolve(String(r.result).split(',')[1]);r.readAsDataURL(file);});}
+$('complaintForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!idToken){report('กรุณาเข้าสู่ระบบ Google ก่อน','error');return;}
+  if(!$('consent').checked){report('กรุณายืนยันข้อมูลก่อนส่ง','error');return;}
+  const required=['name','phone','subject','place','details'];
+  if(required.some(id=>!$(id).value.trim())){report('กรุณากรอกข้อมูลจำเป็นให้ครบถ้วน','error');return;}
+  if(INTENT==='reward'&&!/^\d{13}$/.test($('nationalId').value.trim())){report('กรุณากรอกเลขบัตรประชาชน 13 หลัก','error');return;}
+  let attachments;try{attachments=checkFiles();}catch(err){report(err.message,'error');return;}
+  const btn=$('send');btn.disabled=true;
+  try{
+    report('กำลังเปิดเลขรับเรื่องและสร้างโฟลเดอร์...');
+    const started=await callServer('startComplaint',{idToken,intent:INTENT,nonce,
+      name:$('name').value,phone:$('phone').value,subject:$('subject').value,
+      place:$('place').value,details:$('details').value,nationalId:$('nationalId').value,
+      wantsReply:document.querySelector('input[name=wantsReply]:checked').value});
+    caseId=started.caseId;
+    for(let i=0;i<attachments.length;i++){
+      report('เลขรับเรื่อง '+caseId+' — กำลังบันทึกหลักฐาน '+(i+1)+'/'+attachments.length);
+      const {kind,file}=attachments[i];
+      const base64=await encode(file);
+      await callServer('uploadEvidence',{idToken,caseId,kind,mime:file.type,base64});
+    }
+    const finished=await callServer('finishComplaint',{idToken,caseId});
+    if(finished.status!=='SUBMITTED')throw Error('ไม่สามารถยืนยันสถานะรับเรื่องได้');
+    report('ส่งเรื่องสำเร็จ เลขรับเรื่อง: '+caseId+' กรุณาเก็บเลขรับเรื่องไว้','success');
+    $('formBody').hidden=true;
+  }catch(err){report('ยังไม่ยืนยันการรับเรื่อง'+(caseId?' เลขร่างเรื่อง '+caseId:'')+' : '+(err.message||String(err))+' กรุณาติดต่อเจ้าหน้าที่หากอัปโหลดไม่สำเร็จ','error');}
+  finally{btn.disabled=false;}
+});
+</script></body></html>
