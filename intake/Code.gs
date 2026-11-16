@@ -5,9 +5,9 @@
  * Run setupIntake() in the Apps Script editor AFTER fixing folder permissions.
  */
 const INTAKE = Object.freeze({
-  ROOT: '1Oc4B-M5IHtH5m3SZ-0-dyNIrfqg9epsI',
-  REWARD: '1KE7EaI9nzHMRMnMs-jf0jmcV-yKIBM6O',
-  NO_REWARD: '1xFIrH53Ozn0GGE7R7aad5n3t1Lvl8tGT',
+  ROOT: '12I80r9jyMUqTSe63VYQHGRc_ok6dH5tO',
+  REWARD: '1t6GC0JI-_EidfYd_GjnjAzg8Y1IBNF0L',
+  NO_REWARD: '1MpWPCtJa5yZmHlwK_n_AOmPpkPKLaERC',
   GOOGLE_CLIENT_ID: 'SET_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com',
   SHEET_PROP: 'INTAKE_SPREADSHEET_ID',
   HEADERS: ['เลขรับเรื่อง','วันที่บันทึก','สินบนนำจับ','บัญชีผู้ยื่น','ชื่อผู้ยื่น','โทรศัพท์','เรื่อง','สถานที่','รายละเอียด','แจ้งผล','สถานะ','โฟลเดอร์','clientNonce','หลักฐาน_JSON']
