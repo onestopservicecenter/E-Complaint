@@ -32,7 +32,7 @@ function addText(tag,str,parent){const x=document.createElement(tag);x.textConte
 function appendField(holder,key,value){const d=document.createElement('div');d.className='field';addText('b',key,d);addText('p',value??'',d);holder.appendChild(d);}
 function signin(r){token=r.credential||'';try{const v=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));el('signedMail').textContent=v.email;el('refresh').disabled=false;load();}catch{msg('เข้าสู่ระบบไม่สำเร็จ',true);}}
 window.addEventListener('load',()=>{if(CLIENT_ID.startsWith('SET_')){msg('ยังไม่ได้ตั้งค่า Google OAuth Client ID',true);return;}
- if(!google?.accounts?.id){msg('ไม่สามารถโหลด Google Login',true);return;}
+ if(!window.google?.accounts?.id){msg('ไม่สามารถโหลด Google Login',true);return;}
  google.accounts.id.initialize({client_id:CLIENT_ID,callback:signin,auto_select:false});
  google.accounts.id.renderButton(el('googleButton'),{theme:'outline',size:'large',text:'signin_with'});
 });
