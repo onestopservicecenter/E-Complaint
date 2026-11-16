@@ -189,3 +189,64 @@ body:has(#track:not([hidden])) .agency-shortcuts {
 #track {
   scroll-margin-top: 280px;
 }
+
+.services-main > .complaint-intake.panel {
+  max-width: 980px;
+  margin-inline: auto;
+}
+.complaint-guide {
+  border: 1px solid #d7e7f4;
+  border-radius: 12px;
+  padding: 16px clamp(12px, 3vw, 24px);
+  margin-block: 20px;
+  background: #f5f9fd;
+}
+.complaint-guide summary {
+  color: #084b88;
+  cursor: pointer;
+  font-weight: 700;
+}
+#complaintForm fieldset {
+  min-inline-size: 0;
+  margin: 20px 0;
+  padding: 14px 18px 18px;
+  border: 1px solid #d7e7f4;
+  border-radius: 12px;
+}
+#complaintForm legend {
+  font-weight: 700;
+  color: #10436c;
+  padding-inline: 6px;
+}
+#complaintForm .complaint-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+#complaintForm .complaint-wide {
+  grid-column: 1 / -1;
+}
+#complaintForm .complaint-choice {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-block: 8px;
+}
+#complaintForm input:is([type=checkbox], [type=radio]) {
+  width: auto;
+  flex: none;
+}
+#complaintForm input[type=file] {
+  max-width: 100%;
+}
+#complaintError {
+  color: #982b20;
+}
+#complaintProgress:empty, #complaintError:empty {
+  display: none;
+}
+@media (max-width: 640px) {
+  #complaintForm .complaint-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
