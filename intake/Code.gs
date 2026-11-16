@@ -16,7 +16,7 @@ const REQUIRED_REWARD_DOCS = []; // The latest reward-intent form requires an id
 
 function doGet(e) {
   const intent = (e && e.parameter && e.parameter.intent) === 'reward' ? 'reward' : 'no-reward';
-  const t = HtmlService.createTemplateFromFile('Intake');
+  const t = HtmlService.createTemplateFromFile(intent === 'reward' ? 'Reward' : 'Intake');
   t.intent = intent;
   t.clientId = INTAKE.GOOGLE_CLIENT_ID;
   return t.evaluate().setTitle('แจ้งข้อร้องเรียน | สสจ.นครปฐม')
@@ -95,6 +95,7 @@ function startComplaint(input) {
     subject=cleaned_(input.subject,200),place=cleaned_(input.place,500),
     details=cleaned_(input.details,8000),nationalId=cleaned_(input.nationalId,13),
     age=cleaned_(input.age,3),issuer=cleaned_(input.issuer,250),
+    replyDetails=cleaned_(input.replyDetails,1000),
     address=cleaned_(input.address,1000),contactAddress=cleaned_(input.contactAddress,1000),
     altEmail=cleaned_(input.altEmail,255),lineId=cleaned_(input.lineId,100),
     desiredAction=cleaned_(input.desiredAction,3000),eventDate=cleaned_(input.eventDate,20);
@@ -128,7 +129,7 @@ function startComplaint(input) {
     // Personal data is written only after permissions have been verified.
     const payload={caseId,createdAt:new Date().toISOString(),intent,email,name,phone,
       subject,place,details,nationalId:intent==='reward'?nationalId:null,
-      age,issuer,address,contactAddress,altEmail,lineId,desiredAction,eventDate,
+      age,issuer,address,contactAddress,altEmail,lineId,desiredAction,eventDate,replyDetails,
       acceptTerms:intent==='reward'?true:!!input.acceptTerms,
       wantsReply:input.wantsReply==='yes'};
     folder.createFile(Utilities.newBlob(JSON.stringify(payload,null,2),'application/json','คำร้อง.json'));
