@@ -19,7 +19,15 @@
 .complaint-back-link:focus-visible{outline:3px solid #2196f3;outline-offset:4px}
 @media(max-width:520px){.complaint-choice-page{margin:20px 0 32px!important}.complaint-choice-card{padding:13px;gap:10px}.complaint-choice-icon{width:36px;height:36px;flex-basis:36px;font-size:19px}.complaint-choice-content h3{font-size:16px}}
 </style>
-</head><body><header class="agency-header"><a class="agency-brand" href="#home"><img src="assets/fda-logo.svg" alt="ตราสัญลักษณ์สำนักงานคณะกรรมการอาหารและยา" width="80" height="80"><span><strong>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข</strong><small>สำนักงานสาธารณสุขจังหวัดนครปฐม</small></span></a><div class="agency-header-right"><nav class="agency-shortcuts" aria-label="เมนูส่วนหัว"><a href="#home">หน้าหลัก</a><a href="#contactSection">ติดต่อเรา</a><a class="staff-shortcut" href="staff.html">สำหรับเจ้าหน้าที่</a></nav><div class="header-account"><span id="identity"></span><button id="login">เข้าสู่ระบบด้วย Google</button><button id="logout" class="hidden">ออกจากระบบ</button></div></div></header>
+<style>
+/* Homepage: isolated complaint entry card styling. */
+.complaint-entry-card{text-align:center}
+.complaint-entry-card .complaint-entry-icon{display:block;margin:0 auto 9px;color:#1c2731}
+.complaint-entry-card #quickComplaintTitle{margin:0 0 12px;font-weight:700;line-height:1.5}
+.complaint-entry-card .complaint-entry-button{display:block;width:100%;max-width:260px;box-sizing:border-box;margin:0 auto;border-radius:999px;background:#111;color:#fff;padding:11px 12px;text-align:center;font-weight:600}
+.complaint-entry-card .complaint-entry-button:hover{background:#303030;color:#fff}
+.complaint-entry-card .complaint-entry-button:focus-visible{outline:3px solid #3e9dff;outline-offset:3px}
+</style></head><body><header class="agency-header"><a class="agency-brand" href="#home"><img src="assets/fda-logo.svg" alt="ตราสัญลักษณ์สำนักงานคณะกรรมการอาหารและยา" width="80" height="80"><span><strong>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข</strong><small>สำนักงานสาธารณสุขจังหวัดนครปฐม</small></span></a><div class="agency-header-right"><nav class="agency-shortcuts" aria-label="เมนูส่วนหัว"><a href="#home">หน้าหลัก</a><a href="#contactSection">ติดต่อเรา</a><a class="staff-shortcut" href="staff.html">สำหรับเจ้าหน้าที่</a></nav><div class="header-account"><span id="identity"></span><button id="login">เข้าสู่ระบบด้วย Google</button><button id="logout" class="hidden">ออกจากระบบ</button></div></div></header>
 <div id="home"></div><section id="bannerSection" class="banner-wrap feature-banner" aria-label="แบนเนอร์ประชาสัมพันธ์"><div id="banners"></div><p id="bannerStatus" role="status">กำลังโหลดแบนเนอร์…</p><div class="slide-controls"><button id="prevBanner" aria-label="แบนเนอร์ก่อนหน้า">‹</button><span id="bannerCount"></span><button id="nextBanner" aria-label="แบนเนอร์ถัดไป">›</button></div></section>
 <header class="reference-nav"><a class="nav-brand ossc-link" href="https://onestopservicecenter.github.io/NakhonPathom/" target="_blank" rel="noopener noreferrer" aria-label="ศูนย์บริการสุขภาพผลิตภัณฑ์สุขภาพเบ้ดเสร็จ (OSSC)"><strong>ศูนย์บริการสุขภาพผลิตภัณฑ์สุขภาพเบ้ดเสร็จ <small>(OSSC)</small></strong></a><button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav">☰ เมนู</button><nav id="mainNav" aria-label="เมนูหลัก"><a href="#home">หน้าแรก</a><a href="#track">สำหรับผู้ร้องเรียน</a><a href="#complaint">แจ้งเตือนภัย&amp;ร้องเรียน</a><a href="https://forms.gle/mLvxgx5db13swgfh6" target="_blank" rel="noopener noreferrer">แบบประเมินความพึงพอใจของผู้รับบริการ</a><a href="staff.html">สำหรับเจ้าหน้าที่</a><a href="#contactSection">ติดต่อเรา</a></nav></header>
 
@@ -30,9 +38,10 @@
       <div id="surveyQr"></div>
       <a id="surveyQrLink" class="button" href="https://forms.gle/mLvxgx5db13swgfh6" target="_blank" rel="noopener noreferrer">เปิดแบบประเมิน</a>
     </section>
-    <section class="survey-qr-card" aria-labelledby="quickComplaintTitle">
-      <h3 id="quickComplaintTitle">แจ้งเรื่องร้องเรียน</h3>
-      <a class="button" href="#complaint">เปิดแบบฟอร์มร้องเรียน</a>
+    <section class="survey-qr-card complaint-entry-card" aria-labelledby="quickComplaintTitle">
+      <svg class="complaint-entry-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"></rect><rect x="9" y="2" width="6" height="4" rx="1"></rect><path d="M9 10h6M9 14h6M9 18h4"></path></svg>
+      <h3 id="quickComplaintTitle">แจ้งเรื่อง / ขอรับบริการ</h3>
+      <a class="button complaint-entry-button" href="#complaint">เลือกประเภทการแจ้งเรื่อง</a>
     </section>
     <section class="survey-qr-card" aria-labelledby="quickTrackingTitle">
       <h3 id="quickTrackingTitle">ติดตามสถานะเรื่องร้องเรียน</h3>
