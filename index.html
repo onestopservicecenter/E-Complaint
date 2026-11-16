@@ -34,6 +34,11 @@
 .complaint-subcard:hover{background:#e6f3ff;border-color:#0869b4;color:#034b8d}
 .complaint-subcard:focus-visible{outline:3px solid #2196f3;outline-offset:3px}
 @media(max-width:600px){.complaint-subcard-list{grid-template-columns:1fr}}
+</style><style>
+/* Only linked complaint category cards receive interactive focus states. */
+a.complaint-choice-link{color:inherit;text-decoration:none;cursor:pointer}
+a.complaint-choice-link:hover{border-color:#86bcea;background:#f6fbff}
+a.complaint-choice-link:focus-visible{outline:3px solid #2196f3;outline-offset:3px}
 </style></head><body><header class="agency-header"><a class="agency-brand" href="#home"><img src="assets/fda-logo.svg" alt="ตราสัญลักษณ์สำนักงานคณะกรรมการอาหารและยา" width="80" height="80"><span><strong>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข</strong><small>สำนักงานสาธารณสุขจังหวัดนครปฐม</small></span></a><div class="agency-header-right"><nav class="agency-shortcuts" aria-label="เมนูส่วนหัว"><a href="#home">หน้าหลัก</a><a href="#contactSection">ติดต่อเรา</a><a class="staff-shortcut" href="staff.html">สำหรับเจ้าหน้าที่</a></nav><div class="header-account"><span id="identity"></span><button id="login">เข้าสู่ระบบด้วย Google</button><button id="logout" class="hidden">ออกจากระบบ</button></div></div></header>
 <div id="home"></div><section id="bannerSection" class="banner-wrap feature-banner" aria-label="แบนเนอร์ประชาสัมพันธ์"><div id="banners"></div><p id="bannerStatus" role="status">กำลังโหลดแบนเนอร์…</p><div class="slide-controls"><button id="prevBanner" aria-label="แบนเนอร์ก่อนหน้า">‹</button><span id="bannerCount"></span><button id="nextBanner" aria-label="แบนเนอร์ถัดไป">›</button></div></section>
 <header class="reference-nav"><a class="nav-brand ossc-link" href="https://onestopservicecenter.github.io/NakhonPathom/" target="_blank" rel="noopener noreferrer" aria-label="ศูนย์บริการสุขภาพผลิตภัณฑ์สุขภาพเบ้ดเสร็จ (OSSC)"><strong>ศูนย์บริการสุขภาพผลิตภัณฑ์สุขภาพเบ้ดเสร็จ <small>(OSSC)</small></strong></a><button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav">☰ เมนู</button><nav id="mainNav" aria-label="เมนูหลัก"><a href="#home">หน้าแรก</a><a href="#track">สำหรับผู้ร้องเรียน</a><a href="#complaint">แจ้งข้อร้องเรียน</a><a href="https://forms.gle/mLvxgx5db13swgfh6" target="_blank" rel="noopener noreferrer">แบบประเมินความพึงพอใจของผู้รับบริการ</a><a href="staff.html">สำหรับเจ้าหน้าที่</a><a href="#contactSection">ติดต่อเรา</a></nav></header>
@@ -91,18 +96,18 @@
         </div>
       </div>
     </article>
-    <article class="complaint-choice-card">
+    <a class="complaint-choice-card complaint-choice-link" href="form-status.html#inspection" target="_blank" rel="noopener noreferrer">
       <div class="complaint-choice-icon surveillance-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></div>
       <div class="complaint-choice-content">
         <h3>2 แจ้งตรวจสอบมาตรฐานผลิตภัณฑ์/สถานประกอบการ</h3>
       </div>
-    </article>
-    <article class="complaint-choice-card">
+    </a>
+    <a class="complaint-choice-card complaint-choice-link" href="form-status.html#ossc" target="_blank" rel="noopener noreferrer">
       <div class="complaint-choice-icon service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 16a5 5 0 0 1-5 5h-3"/><rect x="2" y="13" width="4" height="6" rx="2"/><rect x="18" y="13" width="4" height="6" rx="2"/></svg></div>
       <div class="complaint-choice-content">
         <h3>3 ร้องเรียนการบริการ OSSC</h3>
       </div>
-    </article>
+    </a>
   </div>
   <a class="complaint-back-link" href="#home">← กลับหน้าแรก</a>
 </section><section id="track" class="tracking-page" hidden>
