@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="th"><head><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f8fd;color:#173b5c;font-family:Tahoma,"Noto Sans Thai",sans-serif}
+main{max-width:1100px;margin:22px auto;padding:24px;background:white;border:1px solid #d3e4f2;border-radius:15px}
+h1{color:#084c8c;margin:0 0 16px;font-size:27px}h2{color:#084c8c;font-size:20px}
+.bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 18px}
+button{border:0;background:#0869b4;color:white;border-radius:8px;padding:11px 16px;font:inherit;cursor:pointer}
+button:hover{background:#044e88}button:focus-visible,a:focus-visible{outline:3px solid #3aa2ff;outline-offset:3px}
+button:disabled{opacity:.6;cursor:wait}.msg{padding:13px;background:#eff6fc;border-radius:8px;margin:10px 0}.error{background:#fff0f2;color:#a42840}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;border-bottom:1px solid #d7e3ee;padding:10px;vertical-align:top}th{background:#eff6fe}
+.wrapper{overflow:auto}section{margin-top:25px;padding:18px;border:1px solid #d9e6f0;border-radius:12px}
+.field{margin:12px 0}.field b{display:block;margin-bottom:5px}.field p{white-space:pre-wrap;margin:0;line-height:1.6;overflow-wrap:anywhere}
+.file-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:10px 0;border-bottom:1px solid #ebf1f6;padding-bottom:10px}
+#detail[hidden],#list[hidden]{display:none!important}
+@media(max-width:600px){main{margin:0;padding:14px;border-radius:0}th,td{font-size:13px}}
+</style></head><body><main>
+<h1>ระบบเจ้าหน้าที่ — รายการแจ้งข้อร้องเรียน</h1>
+<div class="bar"><div id="googleButton"></div><strong id="signedMail">ยังไม่ได้เข้าสู่ระบบ</strong><button id="refresh" type="button" disabled>รีเฟรชรายการ</button></div>
+<div id="message" class="msg" role="status" aria-live="polite">กรุณาเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่ที่ได้รับอนุญาต</div>
+<section id="list" hidden><h2>เรื่องร้องเรียนที่ยื่นแล้ว</h2>
+<div class="wrapper"><table><thead><tr><th>เลขรับเรื่อง</th><th>วันที่</th><th>ประเภท</th><th>ผู้ร้องเรียน</th><th>เรื่อง</th><th>สถานะ</th><th>ตรวจสอบ</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<section id="detail" hidden><h2 id="detailTitle">รายละเอียดคำร้อง</h2><div id="fields"></div><h2>ไฟล์หลักฐาน</h2><div id="files"></div></section>
+</main><script>
+const CLIENT_ID=<?= JSON.stringify(clientId) ?>;
+let token='';
+const el=id=>document.getElementById(id);
+function msg(v,failed=false){el('message').textContent=v;el('message').className='msg'+(failed?' error':'');}
+function api(method,data){return new Promise((ok,no)=>google.script.run.withSuccessHandler(ok).withFailureHandler(no)[method](data));}
+function addText(tag,str,parent){const x=document.createElement(tag);x.textContent=String(str??'');parent.appendChild(x);return x;}
+function appendField(holder,key,value){const d=document.createElement('div');d.className='field';addText('b',key,d);addText('p',value??'',d);holder.appendChild(d);}
+function signin(r){token=r.credential||'';try{const v=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));el('signedMail').textContent=v.email;el('refresh').disabled=false;load();}catch{msg('เข้าสู่ระบบไม่สำเร็จ',true);}}
+window.addEventListener('load',()=>{if(CLIENT_ID.startsWith('SET_')){msg('ยังไม่ได้ตั้งค่า Google OAuth Client ID',true);return;}
+ if(!google?.accounts?.id){msg('ไม่สามารถโหลด Google Login',true);return;}
+ google.accounts.id.initialize({client_id:CLIENT_ID,callback:signin,auto_select:false});
+ google.accounts.id.renderButton(el('googleButton'),{theme:'outline',size:'large',text:'signin_with'});
+});
+async function load(){el('list').hidden=true;el('detail').hidden=true;msg('กำลังตรวจสอบสิทธิ์และรายการร้องเรียน...');
+ try{const items=await api('staffComplaintList',{idToken:token});const holder=el('rows');holder.replaceChildren();
+ for(const item of items){const tr=document.createElement('tr');
+ [item.caseId,item.createdAt,item.intent==='reward'?'ประสงค์รับเงินสินบนนำจับ':'ไม่ประสงค์รับเงินสินบนนำจับ',item.name,item.subject,item.status].forEach(x=>addText('td',x,tr));
+ const td=document.createElement('td'),btn=addText('button','ดูรายละเอียด',td);btn.onclick=()=>detail(item.caseId);tr.appendChild(td);holder.appendChild(tr);}
+ el('list').hidden=false;msg('แสดงรายการ '+items.length+' เรื่อง (ไม่รวมร่างที่ยังไม่ส่ง)');
+ }catch(e){msg(e.message||String(e),true);}
+}
+async function detail(caseId){msg('กำลังโหลดข้อมูล '+caseId);el('detail').hidden=true;
+ try{const data=await api('staffComplaintDetail',{idToken:token,caseId});
+ el('detailTitle').textContent='รายละเอียดคำร้อง '+caseId;
+ const fields=el('fields');fields.replaceChildren();
+ const labels={caseId:'เลขรับเรื่อง',createdAt:'วันที่',intent:'ประเภท',email:'Google Account ผู้ร้องเรียน',name:'ชื่อ-สกุล',age:'อายุ',nationalId:'เลขบัตรประชาชน',issuer:'ออกบัตรประชาชนโดย',address:'ที่อยู่',contactAddress:'ที่อยู่ที่ติดต่อได้',phone:'โทรศัพท์',altEmail:'อีเมลติดต่อ (ถ้ามี)',lineId:'LINE ID',subject:'เรื่องร้องเรียน',place:'สถานที่',eventDate:'วันที่เกิดเหตุ',details:'รายละเอียด',desiredAction:'การแก้ไขที่ร้องขอ',replyDetails:'ช่องทางตอบกลับ',wantsReply:'ประสงค์ให้ตอบกลับ',acceptTerms:'ยอมรับหลักเกณฑ์'};
+ appendField(fields,'สถานะ',data.status);
+ Object.entries(labels).forEach(([key,label])=>{if(key in data.record)appendField(fields,label,data.record[key]);});
+ const files=el('files');files.replaceChildren();
+ Object.entries(data.evidence||{}).forEach(([kind,arr])=>(arr||[]).forEach(file=>{
+ const wrap=document.createElement('div');wrap.className='file-row';addText('span',kind+' — '+file.name,wrap);
+ const btn=addText('button','เปิดหลักฐาน',wrap);btn.onclick=()=>openEvidence(caseId,file.fileId,btn);files.appendChild(wrap);
+ }));
+ el('detail').hidden=false;el('detail').scrollIntoView({block:'start'});msg('แสดงข้อมูล '+caseId);
+ }catch(e){msg(e.message||String(e),true);}
+}
+async function openEvidence(caseId,fileId,button){button.disabled=true;
+ try{const result=await api('staffComplaintFile',{idToken:token,caseId,fileId});
+ const binary=atob(result.base64);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+ const blob=new Blob([bytes],{type:result.mime});const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.download=result.name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+ }catch(e){msg(e.message||String(e),true);}finally{button.disabled=false;}
+}
+el('refresh').onclick=load;
+</script></body></html>
