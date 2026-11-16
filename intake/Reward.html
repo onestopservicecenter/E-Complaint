@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="th"><head><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f7fc;font-family:Tahoma,"Noto Sans Thai",sans-serif;color:#1b3854;font-size:15px}
+main{max-width:960px;margin:20px auto;padding:clamp(16px,3vw,36px);background:white;border:1px solid #d4e5f3;border-radius:18px}
+h1{text-align:center;font-size:clamp(23px,3vw,32px);margin:0;color:#093c70}h2{font-size:19px;color:#074d8a;margin:0 0 14px}
+p{line-height:1.85} .center{text-align:center}.subtitle{font-size:18px;font-weight:700;color:#0869b4;margin:6px 0 12px}
+section{border:1px solid #d8e6f1;border-radius:14px;padding:clamp(15px,2vw,23px);margin:18px 0}
+.terms{background:#fbfdff}.terms li{line-height:1.85;margin-bottom:13px}.terms ul{margin-top:8px}.terms ul li{margin-bottom:5px}
+label{display:block;font-weight:700;font-size:14px;margin-bottom:7px}input:not([type="checkbox"]):not([type="radio"]),textarea,select{display:block;width:100%;font:inherit;border:1px solid #b9cfdf;border-radius:8px;padding:11px;background:#fff;color:#193954}textarea{min-height:110px;resize:vertical}
+input:focus,textarea:focus{outline:2px solid #73b5ed;outline-offset:2px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{margin:0 0 16px}.field small{display:block;color:#60758a;font-weight:400;margin-top:6px;line-height:1.6}
+.check{display:flex;align-items:flex-start;gap:10px;font-weight:500;line-height:1.65}
+.check input{width:18px;height:18px;flex:0 0 18px;margin-top:3px}fieldset{border:0;padding:0;margin:0 0 12px}legend{font-weight:700;margin-bottom:8px}
+.choice{display:inline-flex;gap:7px;align-items:center;font-weight:500;margin-right:20px}.choice input{accent-color:#0869b4}
+button{background:#0869b4;color:white;border:0;border-radius:8px;padding:13px 22px;font:inherit;font-weight:700;cursor:pointer}button:disabled{background:#91b4d0;cursor:wait}
+.important{background:#edf5ff;padding:15px;border-radius:9px;border-left:4px solid #0876c9}
+.alert{padding:14px;border-radius:9px;border:1px solid #cfe2f1;background:#eef5fc;margin-top:16px;line-height:1.8}
+.error{background:#fff0f3;color:#94263e;border-color:#efbcc9}.success{background:#eaf8ed;color:#1b6337;border-color:#a6dbb6}
+#formFields[hidden],#result[hidden],#replyContact[hidden],#termsGate[hidden]{display:none!important}
+.req{color:#ba2d46}.identity{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+@media(max-width:600px){body{font-size:14px}main{margin:0;border-radius:0}.grid{grid-template-columns:1fr}}
+</style></head><body><main>
+<h1>แจ้งเรื่องร้องเรียน</h1>
+<p class="subtitle center">ประสงค์ขอรับเงินสินบนนำจับ</p>
+<p class="center">กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข สำนักงานสาธารณสุขจังหวัดนครปฐม</p>
+<p>มีภารกิจหลักในการควบคุม กำกับ ติดตาม การอนุญาตเกี่ยวกับผลิตภัณฑ์สุขภาพ (ได้แก่ ยา, อาหาร, เครื่องสำอาง, เครื่องมือแพทย์, วัตถุอันตราย, วัตถุเสพติด, สารระเหย, ผลิตภัณฑ์สมุนไพร) และสถานพยาบาล</p>
+<section><h2>เข้าสู่ระบบ Gmail ก่อนแจ้งเรื่องร้องเรียน</h2>
+<div class="identity"><div id="googleButton"></div><strong id="signedMail">ยังไม่ได้เข้าสู่ระบบ</strong></div>
+<small>อีเมลบัญชี Google ที่เข้าสู่ระบบจะถูกบันทึกใน Backend เพื่อระบุผู้ยื่นเรื่อง</small></section>
+<div id="termsGate" hidden>
+<section class="terms">
+<h2>ข้อตกลง หลักเกณฑ์การแจ้งเรื่องร้องเรียนด้านผลิตภัณฑ์สุขภาพ ประสงค์ขอรับเงินสินบนนำจับ</h2>
+<p><strong>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข จังหวัดนครปฐม</strong></p>
+<ol>
+<li>ใช้ถ้อยคำหรือข้อความที่สุภาพ และต้องมี
+<ul>
+<li>วัน เดือน ปี</li>
+<li>ชื่อ ที่อยู่ หมายเลขโทรศัพท์ อีเมล์ที่สามารถติดต่อถึงผู้ร้องเรียนได้</li>
+<li>ข้อเท็จจริง หรือพฤติการณ์ของเรื่องที่ร้องเรียนได้อย่างชัดเจนว่าได้รับความเดือดร้อนหรือเสียหายอย่างไร ต้องการให้แก้ไขดำเนินการอย่างไร หรือชี้ช่องทางแจ้งเบาะแสเกี่ยวกับการทุจริตของเจ้าหน้าที่/หน่วยงานของกรมได้ชัดแจ้งเพียงพอที่สามารถดำเนินการสืบสวน สอบสวนได้</li>
+<li>ระบุ พยาน เอกสาร พยานวัตถุ และพยานบุคคล (ถ้ามี)</li>
+</ul></li>
+<li>เรื่องร้องเรียนต้องเป็นเรื่องจริงที่มีมูลเหตุ มิได้หวังสร้างกระแสหรือสร้างข่าวที่เสียหายต่อบุคคล</li>
+<li>การใช้บริการร้องเรียนของกระทรวงสาธารณสุขนั้น ต้องสามารถติดต่อกลับไปยังผู้ใช้บริการได้ เพื่อยืนยันว่ามีตัวตนจริง ไม่ได้สร้างเรื่องเพื่อกล่าวหาบุคคลอื่นหรือหน่วยงานต่างๆ ให้เกิดความเสียหาย</li>
+<li>เป็นเรื่องที่ผู้ร้องได้รับความเดือดร้อน หรือเสียหาย อันเนื่องมาจากการปฏิบัติหน้าที่ต่างๆ ของเจ้าหน้าที่หรือหน่วยงานภายในสังกัดกระทรวงสาธารณสุข</li>
+<li>เป็นเรื่องที่ประสงค์ขอให้กระทรวงสาธารณสุขช่วยเหลือหรือขจัดความเดือดร้อน ในด้านที่เกี่ยวข้องกับความรับผิดชอบหรือภารกิจของกระทรวง โดยตรง</li>
+<li>เรื่องร้องเรียนที่มีข้อมูลไม่ครบถ้วน ไม่เพียงพอ หรือไม่สามารถหาข้อมูลเพิ่มเติมได้ในการดำเนินการตรวจสอบ สืบสวน สอบสวน ข้อเท็จจริง ตามรายละเอียดที่กล่าวมาในข้อที่ 1 นั้น จะยุติเรื่องทันที</li>
+<li>ไม่เป็นเรื่องร้องเรียนที่เข้าลักษณะดังต่อไปนี้
+<ul>
+<li>เรื่องร้องเรียนที่เป็นบัตรสนเท่ห์ เว้นแต่บัตรสนเท่ห์นั้นจะระบุรายละเอียดตามข้อที่ 1 นั้น จึงจะรับไว้พิจารณาเป็นการเฉพาะเรื่อง</li>
+<li>เรื่องร้องเรียนที่เข้าสู่กระบวนการยุติธรรมแล้ว หรือเป็นเรื่องที่ศาลได้มีคำสั่งพิพากษาหรือคำสั่งถึงที่สุดแล้ว</li>
+<li>เรื่องร้องเรียนที่เกี่ยวข้องกับสถาบันพระมหากษัตริย์</li>
+<li>เรื่องร้องเรียนที่เกี่ยวข้องกับนโยบายของรัฐบาล</li>
+<li>เรื่องร้องเรียนที่หน่วยงานอื่นได้ดำเนินการตรวจสอบ พิจารณาวินิจฉัย และได้มีข้อสรุปผลการพิจารณาเป็นที่เรียบร้อยไปแล้ว</li>
+</ul></li>
+<li>ข้าพเจ้าขอรับรองว่าข้อเท็จจริงที่ได้ยื่นร้องเรียนต่อกระทรวงสาธารณสุขเป็นเรื่องที่เกิดขึ้นจริงทั้งหมดและขอรับผิดชอบต่อข้อเท็จจริงดังกล่าวข้างต้นทุกประการ</li>
+<li>การนำความเท็จมาร้องเรียนต่อเจ้าหน้าที่ ซึ่งทำให้ผู้อื่นได้รับความเสียหายอาจเป็นความผิดฐานแจ้งความเท็จต่อเจ้าพนักงานตามประมวลกฎหมายอาญา</li>
+</ol>
+<p><strong>*ท่านยอมรับข้อตกลง หลักเกณฑ์ หรือไม่*</strong></p>
+<div class="important">สำคัญ : หน่วยงานจะพิจารณาคำร้องของท่าน ภายใน 14 วันทำการ หากคำร้องนั้นไม่อยู่ในขอบข่ายการกำกับ ดูแล ของกลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข จะมีเจ้าหน้าที่ของหน่วยงานติดต่อกลับไปยังท่านเพื่อแจ้งช่องทางในการร้องเรียนที่ถูกต้อง เหมาะสม ต่อไป (ติดต่อโทร.<strong>0 3424 3620 - 22</strong> <strong>0 3427 0349 ต่อ 124 หรือ 230</strong>)</div>
+<p><label class="check"><input type="checkbox" id="acceptTerms">ข้าพเจ้ายอมรับ</label></p>
+<p>การรับเรื่องร้องเรียนของท่านต้องใช้ข้อมูลที่เป็นจริงเท่านั้น และการรับรองร้องเรียนจากท่านจะสมบูรณ์ก็ต่อเมื่อสำนักงานสาธารณสุขจังหวัดได้ติดต่อกับท่านได้</p>
+<p>ทั้งนี้เพื่อรับทราบรายละเอียดข้อเท็จจริง เพื่อใช้ในการตรวจสอบข้อเท็จจริงและแก้ไขปัญหาเรื่องร้องเรียน</p>
+<p>ข้อความที่ท่านให้กับสำนักงานทั้งหมดจะเป็นเก็บความลับโดยจะเปิดเผยเฉพาะมูลเหตุที่เกิดข้อร้องเรียนที่จำเป็นต่อการพิสูจน์การกระทำความผิดเท่านั้น</p>
+</section>
+<form id="rewardForm">
+<div id="formFields" hidden>
+<section><h2>ข้อมูลผู้แจ้งเรื่องร้องเรียน</h2>
+<div class="field"><label for="name">ชื่อ-สกุล ผู้แจ้งเรื่องร้องเรียน <span class="req">*</span></label>
+<input id="name" maxlength="150" autocomplete="name" required><small>ข้อมูลเป็นความลับระหว่างผู้ร้องกับพนักงานเจ้าหน้าที่เท่านั้น ไม่เปิดเผยต่อผู้ประกอบการ</small></div>
+<div class="grid"><div class="field"><label for="age">อายุ</label><input id="age" type="number" min="0" max="120"></div>
+<div class="field"><label for="nationalId">เลขบัตรประชาชน <span class="req">*</span></label><input id="nationalId" inputmode="numeric" maxlength="13" pattern="[0-9]{13}" required></div></div>
+<div class="field"><label for="issuer">ออกบัตรประชาชนโดย <span class="req">*</span></label><input id="issuer" maxlength="250" required></div>
+<div class="field"><label for="address">ที่อยู่ <span class="req">*</span></label><textarea id="address" maxlength="1000" required></textarea></div>
+<div class="field"><label for="identityCard">สำเนาบัตรประชาชน <span class="req">*</span></label><input id="identityCard" type="file" accept="image/jpeg,image/png,image/webp" required><small>อัปโหลดไฟล์ที่รองรับ 1 รายการ: image ขนาดสูงสุด 10 MB</small></div>
+<div class="field"><label for="contactAddress">ที่อยู่ที่สามารถติดต่อได้ <span class="req">*</span></label><textarea id="contactAddress" maxlength="1000" required></textarea></div>
+<div class="grid"><div class="field"><label for="phone">โทรศัพท์ที่สามารถติดต่อได้ <span class="req">*</span></label><input id="phone" type="tel" maxlength="30" required></div>
+<div class="field"><label for="altEmail">อีเมล (ถ้ามี)</label><input id="altEmail" type="email" maxlength="255"></div></div>
+<div class="field"><label for="lineId">LINE ID (ถ้ามี)</label><input id="lineId" maxlength="100"></div>
+<fieldset><legend>ประสงค์ให้ตอบกลับกรณีดำเนินการตรวจสอบข้อเท็จจริงแล้วเสร็จหรือไม่</legend>
+<label class="choice"><input type="radio" name="wantsReply" value="yes" checked> ประสงค์</label>
+<label class="choice"><input type="radio" name="wantsReply" value="no"> ไม่ประสงค์</label>
+</fieldset>
+<div id="replyContact" class="field"><label for="replyDetails">หากประสงค์ให้ตอบกลับหลังดำเนินการแล้วเสร็จ</label><textarea id="replyDetails" maxlength="1000"></textarea></div>
+</section>
+<section><h2>รายละเอียดข้อร้องเรียนของท่าน</h2>
+<div class="grid"><div class="field"><label for="eventDate">วัน เดือน ปี <span class="req">*</span></label><input id="eventDate" type="date" required></div>
+<div class="field"><label for="subject">เรื่องที่ร้องเรียน <span class="req">*</span></label><input id="subject" maxlength="200" required></div></div>
+<div class="field"><label for="place">สถานที่หรือสถานประกอบการ <span class="req">*</span></label><textarea id="place" maxlength="500" required></textarea></div>
+<div class="field"><label for="details">รายละเอียดข้อร้องเรียนของท่าน <span class="req">*</span></label><textarea id="details" maxlength="8000" required></textarea>
+<small>เพิ่มเติมข้อมูลโดยละเอียด เช่น ประเด็นผลิตภัณฑ์มีสิ่งแปลกปลอมกรุณาใส่แหล่งที่ซื้อ วันที่ซื้อ และข้อมูลผลิตภัณฑ์ ประเด็นเภสัชกรไม่อยู่ ณ สถานที่ขายยา กรุณาระบุวันและเวลาที่พบเบาะแสโดยละเอียด</small></div>
+<div class="field"><label for="desiredAction">ต้องการให้แก้ไขดำเนินการอย่างไร <span class="req">*</span></label><textarea id="desiredAction" maxlength="3000" required></textarea></div>
+<div class="field"><label for="evidence">แนบไฟล์หรือรูปภาพ (ถ้ามี)</label><input id="evidence" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,audio/mpeg,audio/wav,audio/ogg,application/pdf"><small>อัปโหลดไฟล์เสียง video รูปภาพ ไฟล์ ไม่เกิน 10MB ต่อไฟล์ (สูงสุด 5 ไฟล์ต่อเรื่อง)</small></div>
+</section>
+<section><button id="send" type="submit">ส่งเรื่องร้องเรียน</button></section>
+</div></form></div><div id="result" role="status" aria-live="polite" class="alert" hidden></div></main>
+<script>
+const CLIENT_ID=<?= JSON.stringify(clientId) ?>;
+let idToken='',nonce=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(16).slice(2).padEnd(16,'0')),caseId='';
+const el=id=>document.getElementById(id);
+function status(message,type=''){const v=el('result');v.hidden=false;v.textContent=message;v.className='alert '+type;v.scrollIntoView({block:'nearest'});}
+function api(action,data){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[action](data));}
+function signIn(r){
+ idToken=r.credential||'';
+ try{const part=idToken.split('.')[1];const user=JSON.parse(atob(part.replace(/-/g,'+').replace(/_/g,'/')));
+ el('signedMail').textContent=user.email||'เข้าสู่ระบบแล้ว';el('termsGate').hidden=false;el('result').hidden=true;
+ }catch{status('เข้าสู่ระบบ Google ไม่สำเร็จ','error');}
+}
+window.addEventListener('load',()=>{
+ if(CLIENT_ID.startsWith('SET_')){status('ระบบยังไม่เปิดรับข้อมูล: เจ้าหน้าที่ยังไม่ได้ตั้งค่า Google Login','error');return;}
+ if(!window.google?.accounts?.id){status('ไม่สามารถโหลด Google Login ได้','error');return;}
+ google.accounts.id.initialize({client_id:CLIENT_ID,callback:signIn,auto_select:false});
+ google.accounts.id.renderButton(el('googleButton'),{theme:'outline',size:'large',text:'signin_with'});
+});
+el('acceptTerms').addEventListener('change',()=>{el('formFields').hidden=!el('acceptTerms').checked;});
+document.querySelectorAll('input[name=wantsReply]').forEach(x=>x.addEventListener('change',()=>el('replyContact').hidden=document.querySelector('input[name=wantsReply]:checked').value!=='yes'));
+function fileCheck(f,types){return f&&types.includes(f.type)&&f.size<=10*1024*1024&&f.size>0;}
+async function encoded(f){return new Promise((ok,no)=>{const rd=new FileReader();rd.onerror=()=>no(Error('อ่านไฟล์ไม่ได้'));rd.onload=()=>ok(String(rd.result).split(',')[1]);rd.readAsDataURL(f);});}
+el('rewardForm').addEventListener('submit',async ev=>{
+ ev.preventDefault();
+ if(!idToken){status('กรุณาเข้าสู่ระบบก่อน','error');return;}
+ if(!el('acceptTerms').checked){status('กรุณายอมรับข้อตกลง','error');return;}
+ const form=ev.currentTarget;
+ if(!form.reportValidity())return;
+ const idf=el('identityCard').files[0],images=['image/jpeg','image/png','image/webp'];
+ if(!fileCheck(idf,images)){status('สำเนาบัตรประชาชนต้องเป็นภาพ 1 รายการ ขนาดไม่เกิน 10 MB','error');return;}
+ const files=[{kind:'identityCard',file:idf}],extra=[...el('evidence').files];
+ const types=[...images,'video/mp4','audio/mpeg','audio/wav','audio/ogg','application/pdf'];
+ if(extra.length>5||extra.some(f=>!fileCheck(f,types))){status('ไฟล์หลักฐานต้องเป็นประเภทที่รองรับ ขนาดไม่เกิน 10 MB ต่อไฟล์ และไม่เกิน 5 ไฟล์','error');return;}
+ files.push(...extra.map(file=>({kind:'evidence',file})));
+ const btn=el('send');btn.disabled=true;
+ try{
+ status('กำลังสร้างเลขรับเรื่อง...');
+ const started=await api('startComplaint',{idToken,intent:'reward',nonce,acceptTerms:true,
+ name:el('name').value,age:el('age').value,nationalId:el('nationalId').value,
+ issuer:el('issuer').value,address:el('address').value,contactAddress:el('contactAddress').value,
+ phone:el('phone').value,altEmail:el('altEmail').value,lineId:el('lineId').value,
+ wantsReply:document.querySelector('input[name=wantsReply]:checked').value,
+ replyDetails:el('replyDetails').value,
+ subject:el('subject').value,place:el('place').value,details:el('details').value,
+ desiredAction:el('desiredAction').value,eventDate:el('eventDate').value});
+ caseId=started.caseId;
+ for(let i=0;i<files.length;i++){
+ status('เลขรับเรื่อง '+caseId+' กำลังบันทึกไฟล์ '+(i+1)+'/'+files.length);
+ await api('uploadEvidence',{idToken,caseId,kind:files[i].kind,mime:files[i].file.type,base64:await encoded(files[i].file)});
+ }
+ const result=await api('finishComplaint',{idToken,caseId});
+ if(result.status!=='SUBMITTED')throw Error('ยังไม่ยืนยันสถานะรับเรื่อง');
+ status('ส่งเรื่องเรียบร้อย เลขรับเรื่อง: '+caseId,'success');
+ el('formFields').hidden=true;
+ }catch(error){status('ยังไม่ยืนยันการรับเรื่อง'+(caseId?' หมายเลขร่าง '+caseId:'')+' : '+(error.message||error),'error');}
+ finally{btn.disabled=false;}
+});
+</script></body></html>
