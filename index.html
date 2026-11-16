@@ -1,4 +1,4 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข | สสจ.นครปฐม</title><link rel="preconnect" href="https://script.google.com"><link rel="dns-prefetch" href="https://script.googleusercontent.com"><link rel="stylesheet" href="styles.css?v=20261113-tracking-card-top"><script defer src="config.js?v=20261027-drive-r7"></script><script defer src="vendor/qrcode.js"></script><script defer src="app.js?v=20261113-tracking-card"></script><script src="https://accounts.google.com/gsi/client" async defer></script>
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข | สสจ.นครปฐม</title><link rel="preconnect" href="https://script.google.com"><link rel="dns-prefetch" href="https://script.googleusercontent.com"><link rel="stylesheet" href="styles.css?v=20261116-intake"><script defer src="config.js?v=20261027-drive-r7"></script><script defer src="vendor/qrcode.js"></script><script defer src="app.js?v=20261116-intake"></script><script defer src="complaint.js?v=20261116-intake"></script><script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* E-Complaint: selection screen isolated to the existing complaint route. */
 .complaint-choice-page{max-width:920px!important;margin:32px auto 48px!important;padding:clamp(16px,2vw,30px)!important;border:1px solid #e0e5eb!important;border-radius:18px!important;box-shadow:none!important}
@@ -70,7 +70,8 @@
       <div class="complaint-choice-content">
         <h3>01 เฝ้าระวัง</h3>
         <p>แจ้งเบาะแสหรือสิ่งผิดปกติที่อาจเป็นความเสี่ยงต่อสุขภาพ เช่น ผลิตภัณฑ์หรือสถานประกอบการที่น่าสงสัย</p>
-        <span class="complaint-choice-pending">แบบฟอร์มเฝ้าระวังอยู่ระหว่างเชื่อมต่อ</span>
+        <span class="complaint-choice-pending" id="surveillancePending">แบบฟอร์มเฝ้าระวังอยู่ระหว่างเชื่อมต่อ</span>
+        <a class="complaint-choice-action" id="surveillanceLink" href="#intake?type=monitor" hidden>เปิดแบบฟอร์มเฝ้าระวัง</a>
       </div>
     </article>
     <article class="complaint-choice-card">
@@ -78,7 +79,7 @@
       <div class="complaint-choice-content">
         <h3>02 ร้องเรียน</h3>
         <p>ร้องเรียนปัญหาจากผลิตภัณฑ์สุขภาพ สถานประกอบการ หรือการโฆษณาที่อาจไม่ถูกต้อง</p>
-        <a class="complaint-choice-action" href="https://docs.google.com/forms/d/e/1FAIpQLSeaj2NfthrpLxmh06WKIizhdC0b5TrD2lL4ANSTI-FDa4eJSA/viewform" target="_blank" rel="noopener noreferrer">เลือกประเภทร้องเรียน → เปิดแบบฟอร์มร้องเรียน <span aria-hidden="true">↗</span></a>
+        <a class="complaint-choice-action" id="complaintChoiceLink" href="https://docs.google.com/forms/d/e/1FAIpQLSeaj2NfthrpLxmh06WKIizhdC0b5TrD2lL4ANSTI-FDa4eJSA/viewform" target="_blank" rel="noopener noreferrer">เลือกประเภทร้องเรียน → เปิดแบบฟอร์มร้องเรียน <span aria-hidden="true">↗</span></a>
       </div>
     </article>
     <article class="complaint-choice-card">
@@ -91,7 +92,115 @@
     </article>
   </div>
   <a class="complaint-back-link" href="#home">← กลับหน้าแรก</a>
-</section><section id="track" class="tracking-page" hidden>
+</section><section id="intake" class="section panel complaint-intake" hidden>
+  <a href="#complaint">← กลับไปเลือกประเภท</a>
+  <h2>แบบบันทึกรับเรื่องร้องเรียนหรือเฝ้าระวัง สถานประกอบการ ผลิตภัณฑ์สุขภาพ และการโฆษณา</h2>
+  <p>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข</p>
+  <details class="complaint-guide">
+    <summary>ขอบเขตการรับเรื่องและแนวทางการให้ข้อมูล</summary>
+    <h3>การแจ้งร้องเรียน / แจ้งเบาะแสที่อยู่ในความรับผิดชอบของสำนักงานสาธารณสุขจังหวัดนครปฐม</h3>
+    <ol>
+      <li>ได้รับอันตรายจากการบริโภคหรือใช้ผลิตภัณฑ์สุขภาพ เช่น อาหาร เครื่องสำอาง ยา ผลิตภัณฑ์สมุนไพร หรือวัตถุอันตราย แม้ปฏิบัติตามวิธีใช้ คำแนะนำ หรือข้อควรระวังบนฉลากแล้ว</li>
+      <li>พบสถานที่ผลิตอาหารที่อาจไม่ปลอดภัยต่อผู้บริโภค</li>
+      <li>พบโฆษณาโอ้อวด หลอกลวง หรือทำให้เข้าใจผิดเกี่ยวกับผลิตภัณฑ์สุขภาพ</li>
+      <li>พบข้อบกพร่องที่เห็นได้ชัด เช่น ไม่มีฉลากภาษาไทย หรือมีข้อมูลบนฉลากไม่ครบ</li>
+      <li>พบการผลิต นำเข้า หรือขายยาและวัตถุเสพติดโดยไม่ได้รับอนุญาต</li>
+      <li>พบการผลิต นำเข้า หรือขายผลิตภัณฑ์สุขภาพปลอม</li>
+      <li>พบการผลิตหรือขายผลิตภัณฑ์ต้องห้ามหรือมีสารห้ามใช้ เช่น ยาชุด ครีมทาฝ้าที่มีไฮโดรควิโนน หรืออาหารผสมบอแรกซ์</li>
+      <li>พบการประกอบวิชาชีพหรือการดำเนินกิจการสถานพยาบาลที่ไม่ได้มาตรฐาน หรือปัญหาเกี่ยวกับการโฆษณา</li>
+      <li>พบสถานประกอบการเพื่อสุขภาพ เช่น ร้านนวดเพื่อสุขภาพหรือร้านนวดเสริมความงาม ที่ไม่ได้รับอนุญาต ไม่ได้มาตรฐาน หรือมีปัญหาเกี่ยวกับการโฆษณา</li>
+      <li>เรื่องอื่น ๆ หากอยู่นอกอำนาจหน้าที่ สำนักงานสาธารณสุขจังหวัดนครปฐมจะยุติเรื่องและส่งต่อให้ผู้ที่เกี่ยวข้อง</li>
+    </ol>
+    <h3>แนวทางการให้ข้อมูลเพื่อนำไปสู่การตรวจสอบข้อเท็จจริงได้อย่างรวดเร็ว</h3>
+    <h4>ปัญหาด้านสถานที่</h4>
+    <ul>
+      <li>ระบุจุดสังเกต ระยะห่าง และพิกัด GPS หากทราบ เช่น ตรงข้ามโรงเรียนประมาณ 20 เมตร เป็นอาคารชั้นเดียว และระบุสีอาคาร</li>
+      <li>ระบุถนนและร้านค้าใกล้เคียง พร้อมช่วงเวลาที่พบกิจกรรม เช่น ผลิตหมูตอนกลางคืนหรือช่วงที่มีรถรับส่ง</li>
+      <li>หากกิจการไม่ได้มาตรฐาน ให้อธิบายเหตุการณ์และระบุบ้านเลขที่ (ถ้าทราบ) หมู่ที่ ถนน ตำบล อำเภอ และจังหวัด</li>
+    </ul>
+    <h4>ปัญหาด้านผลิตภัณฑ์</h4>
+    <ul>
+      <li>ระบุว่าผลิตภัณฑ์หมดอายุหรือไม่ พบสิ่งแปลกปลอมหรือสารห้ามใช้อย่างไร</li>
+      <li>ระบุกรณีไม่มีเลขทะเบียน เลขไม่ถูกต้อง หรือฉลากไม่ครบถ้วน</li>
+      <li>อธิบายอันตรายที่เกิดขึ้นแม้ปฏิบัติตามวิธีใช้และข้อควรระวัง</li>
+      <li>ระบุข้อความหรือช่องทางที่พบการโฆษณาโอ้อวดหรือหลอกลวง</li>
+      <li>ระบุกรณีไม่แสดงฉลากภาษาไทย หรือข้อความภาษาไทยไม่ครบถ้วน</li>
+    </ul>
+    <p>กรุณาอธิบายรายละเอียดให้ครบถ้วนเพื่อให้เจ้าหน้าที่ตรวจสอบข้อเท็จจริงได้รวดเร็วยิ่งขึ้น</p>
+  </details>
+  <div id="complaintLogin" class="login-gate hidden">
+    <p>เลือกบัญชี Google ที่ต้องการใช้ยื่นเรื่องและติดตามสถานะ</p>
+    <button type="button" class="login-button">เข้าสู่ระบบ ด้วย Mail</button>
+  </div>
+  <p id="complaintFallback">ระหว่างเตรียมเปิดใช้แบบฟอร์มบนเว็บไซต์ <a href="https://docs.google.com/forms/d/e/1FAIpQLSeaj2NfthrpLxmh06WKIizhdC0b5TrD2lL4ANSTI-FDa4eJSA/viewform" target="_blank" rel="noopener noreferrer">แจ้งเรื่องผ่านแบบฟอร์มเดิม</a></p>
+  <form id="complaintForm" class="hidden">
+    <p class="complaint-account">อีเมลบัญชี Google * <strong id="complaintEmail"></strong> <button type="button" id="complaintSwitch">ออกจากระบบเพื่อเปลี่ยนบัญชี</button></p>
+    <p>ระบบบันทึกชื่อผู้ร้องที่กรอกและอีเมลจากบัญชี Google เพื่อยืนยันเจ้าของเรื่องและให้ติดตามสถานะได้ด้วยบัญชีเดิม</p>
+    <p>ช่องที่มีเครื่องหมาย * เป็นข้อมูลที่ต้องระบุ <a href="#privacy">อ่านการใช้ข้อมูลส่วนบุคคล</a></p>
+    <label class="complaint-choice"><input type="checkbox" name="acknowledge" required> ข้าพเจ้ารับทราบคำแนะนำในการร้องเรียน *</label>
+    <fieldset>
+      <legend>ต้องการให้เจ้าหน้าที่แจ้งผลการตรวจสอบข้อเท็จจริงหรือไม่ *</legend>
+      <label class="complaint-choice"><input type="radio" name="notifyResult" value="yes" required> แจ้งผลการตรวจสอบกลับไปยังผู้ร้อง</label>
+      <label class="complaint-choice"><input type="radio" name="notifyResult" value="no" required> ไม่แจ้งผลการตรวจสอบกลับไปยังผู้ร้อง</label>
+    </fieldset>
+    <fieldset>
+      <legend>ท่านประสงค์แจ้งความดำเนินคดีหรือไม่ *</legend>
+      <p>เจ้าหน้าที่จะตรวจสอบข้อเท็จจริงและให้คำแนะนำแก่ผู้ได้รับอนุญาตเพื่อให้ดำเนินการอย่างถูกต้องตามกฎหมาย โดยพิจารณาความประสงค์ของผู้ร้องในการดำเนินคดี</p>
+      <label class="complaint-choice"><input type="radio" name="prosecution" value="monitor" required> แจ้งเฝ้าระวัง ไม่ประสงค์ดำเนินคดี</label>
+      <label class="complaint-choice"><input type="radio" name="prosecution" value="proceed" required> แจ้งเรื่องร้องเรียนเพื่อดำเนินคดีหากพบว่ามีการกระทำผิดกฎหมาย</label>
+    </fieldset>
+    <fieldset id="complaintReward" hidden disabled>
+      <legend>หากการดำเนินคดีสิ้นสุดและมีรางวัลสินบนนำจับ ท่านต้องการรับรางวัลหรือไม่ *</legend>
+      <p>เจ้าหน้าที่จะตรวจสอบข้อเท็จจริง ให้คำแนะนำแก่ผู้ได้รับอนุญาต และดำเนินการตามกฎหมายเมื่อพบการกระทำผิด</p>
+      <label class="complaint-choice"><input type="radio" name="reward" value="yes" required> ต้องการรางวัลสินบนนำจับ</label>
+      <label class="complaint-choice"><input type="radio" name="reward" value="no" required> ไม่ต้องการรางวัลสินบนนำจับ</label>
+    </fieldset>
+    <fieldset id="complaintRewardDocuments" hidden disabled>
+      <legend>เอกสารประกอบการขอรับรางวัลสินบนนำจับ</legend>
+      <p>กรอกรายละเอียดและลงลายมือชื่อด้วยตนเอง แนบ PDF ช่องละหนึ่งไฟล์ ขนาดไม่เกิน 10 MB ต่อไฟล์</p>
+      <p><a href="https://cemc.fda.moph.go.th/complaint/category/complaint-form/" target="_blank" rel="noopener noreferrer">ดาวน์โหลดแบบ น.จ.1 และแบบคำขอรับเงินผ่านธนาคาร</a></p>
+      <label>เลขบัตรประชาชนผู้ร้อง * <input type="password" name="nationalId" inputmode="numeric" pattern="[0-9]{13}" maxlength="13" autocomplete="off" required></label>
+      <label>บันทึกการแจ้งและรับแจ้งความนำจับ (แบบ น.จ.1) * <input type="file" name="informant" accept=".pdf,application/pdf" required></label>
+      <label>แบบคำขอรับเงินผ่านธนาคาร * <input type="file" name="payment" accept=".pdf,application/pdf" required></label>
+      <label>สำเนาบัตรประชาชนพร้อมรับรองสำเนาถูกต้อง * <input type="file" name="identityCopy" accept=".pdf,application/pdf" required></label>
+      <label>สำเนาหน้าสมุดบัญชีพร้อมรับรองสำเนาถูกต้อง * <input type="file" name="bankbook" accept=".pdf,application/pdf" required></label>
+    </fieldset>
+    <fieldset class="complaint-fields">
+      <legend>ข้อมูลผู้ร้องเรียน</legend>
+      <label>ชื่อ * <input name="givenName" maxlength="60" autocomplete="given-name" required></label>
+      <label>นามสกุล * <input name="familyName" maxlength="60" autocomplete="family-name" required></label>
+      <label>เบอร์โทรที่สามารถติดต่อได้ * <input type="tel" name="phone" minlength="8" maxlength="25" autocomplete="tel" required></label>
+      <label class="complaint-wide">ที่อยู่ของผู้ร้องเรียน (ถ้ามี) <textarea name="address" maxlength="500" rows="2" autocomplete="street-address"></textarea></label>
+      <p class="complaint-wide">หากไม่ระบุที่อยู่และต้องส่งผลทางไปรษณีย์ เจ้าหน้าที่จะใช้ที่อยู่ตามบัตรประชาชนเมื่อมีข้อมูล</p>
+    </fieldset>
+    <fieldset class="complaint-fields">
+      <legend>ข้อมูลเรื่องร้องเรียน</legend>
+      <label>ประเภทเรื่อง * <select id="complaintCategory" name="category" required><option value="">เลือกประเภทเรื่อง</option></select></label>
+      <label>หัวข้อเรื่อง * <input name="subject" maxlength="200" required></label>
+      <label class="complaint-wide">สถานที่ตั้งหรือบริเวณที่พบ * <input name="location" maxlength="500" placeholder="ระบุจุดสังเกตหรือพิกัด GPS หากทราบ หากไม่ทราบให้ระบุว่าไม่ทราบ" required></label>
+      <label>ถนน <input name="road" maxlength="120"></label>
+      <label>หมู่ที่ <input name="village" maxlength="30"></label>
+      <label>ตำบล * <input name="subdistrict" maxlength="100" required></label>
+      <label>อำเภอ * <input name="district" maxlength="100" required></label>
+      <label>จังหวัด * <input name="province" maxlength="100" required></label>
+      <label class="complaint-wide">คำอธิบายเพิ่มเติม * <textarea name="details" minlength="20" maxlength="10000" rows="6" placeholder="ระบุว่าใคร ทำอะไร ที่ไหน อย่างไร และเกิดผลอย่างไร เช่น ฉลากไม่ระบุวันหมดอายุ พบสิ่งแปลกปลอม หรือได้รับบริการที่ไม่ได้มาตรฐาน" required></textarea></label>
+    </fieldset>
+    <fieldset class="complaint-fields">
+      <legend>ไฟล์หลักฐาน</legend>
+      <p class="complaint-wide">ช่องละหนึ่งไฟล์ รองรับ PDF ไฟล์เสียง ไฟล์ภาพ และไฟล์ภาพวาด (SVG, DXF, DWG) ขนาดไม่เกิน 10 MB ต่อไฟล์ ช่องวิดีโอรองรับไฟล์วิดีโอเพิ่มเติมและขนาดไม่เกิน 100 MB</p>
+      <label>รูปภาพหลักฐาน 1 * <input type="file" name="evidence1" accept=".pdf,.svg,.dxf,.dwg,image/*,audio/*" required></label>
+      <label>รูปภาพหลักฐาน 2 <input type="file" name="evidence2" accept=".pdf,.svg,.dxf,.dwg,image/*,audio/*"></label>
+      <label>รูปภาพหลักฐาน 3 <input type="file" name="evidence3" accept=".pdf,.svg,.dxf,.dwg,image/*,audio/*"></label>
+      <label>รูปภาพหลักฐาน 4 <input type="file" name="evidence4" accept=".pdf,.svg,.dxf,.dwg,image/*,audio/*"></label>
+      <label class="complaint-wide">วิดีโอหลักฐาน (ถ้ามี) <input type="file" name="video" accept=".pdf,.svg,.dxf,.dwg,image/*,audio/*,video/*"></label>
+    </fieldset>
+    <button type="submit" id="complaintSubmit">ส่งเรื่องร้องเรียน</button>
+  </form>
+  <p id="complaintProgress" role="status" aria-live="polite"></p>
+  <p id="complaintError" role="alert"></p>
+  <a class="button" id="complaintReceipt" hidden>ติดตามเรื่องที่ส่งแล้ว</a>
+</section>
+<section id="track" class="tracking-page" hidden>
   <div class="login-gate tracking-login">
     <span class="tracking-login-icon" aria-hidden="true">🔐</span>
     <h2 style="text-align:center">สำหรับผู้ร้องเรียน (ประชาชน)</h2>
