@@ -37,16 +37,23 @@ function setupIntake() {
 }
 function assertPrivateFolders_() {
   const root = DriveApp.getFolderById(INTAKE.ROOT);
-  for (const id of [INTAKE.ROOT, INTAKE.REWARD, INTAKE.NO_REWARD]) {
-    const folder = DriveApp.getFolderById(id);
-    if (folder.getSharingAccess() !== DriveApp.Access.PRIVATE) {
-      throw Error('ระบบยังไม่เปิดรับข้อมูล: โฟลเดอร์ร้องเรียนมีสิทธิ์แชร์สาธารณะ กรุณาจำกัดสิทธิ์ทั้ง 3 โฟลเดอร์ก่อน');
+  const checked = new Set();
+  // Check all ancestor folders too: a shared ancestor may expose inherited child data.
+  function checkAncestors(folder,depth) {
+    if(depth>25) throw Error('ไม่สามารถยืนยันสิทธิ์โฟลเดอร์ระดับบนได้');
+    if(checked.has(folder.getId())) return;
+    checked.add(folder.getId());
+    if(folder.getSharingAccess() !== DriveApp.Access.PRIVATE) {
+      throw Error('ยังไม่สามารถเปิดรับข้อมูล: โฟลเดอร์ร้องเรียนหรือโฟลเดอร์ระดับบนเปิดสิทธิ์สาธารณะ');
     }
+    const parents=folder.getParents();
+    while(parents.hasNext()) checkAncestors(parents.next(),depth+1);
   }
+  for (const id of [INTAKE.ROOT, INTAKE.REWARD, INTAKE.NO_REWARD]) checkAncestors(DriveApp.getFolderById(id),0);
   for (const id of [INTAKE.REWARD, INTAKE.NO_REWARD]) {
-    const parents = DriveApp.getFolderById(id).getParents();
-    let isChild = false;
-    while(parents.hasNext()) { if(parents.next().getId()===root.getId()) isChild=true; }
+    const parents=DriveApp.getFolderById(id).getParents();
+    let isChild=false;
+    while(parents.hasNext()) if(parents.next().getId()===root.getId()) isChild=true;
     if(!isChild) throw Error('โครงสร้างโฟลเดอร์ร้องเรียนไม่ถูกต้อง');
   }
 }
@@ -68,6 +75,7 @@ function identity_(token) {
   return v.email.toLowerCase();
 }
 function cleaned_(value,max) { return String(value||'').trim().slice(0,max); }
+function sheetText_(value) { const s=String(value||''); return /^[=+\-@]/.test(s)?"'"+s:s; }
 function exactIntent_(intent) {
   if(!['reward','no-reward'].includes(intent)) throw Error('ประเภทการร้องเรียนไม่ถูกต้อง');
   return intent;
@@ -112,7 +120,7 @@ function startComplaint(input) {
       subject,place,details,nationalId:intent==='reward'?nationalId:null,
       wantsReply:input.wantsReply==='yes'};
     folder.createFile(Utilities.newBlob(JSON.stringify(payload,null,2),'application/json','คำร้อง.json'));
-    sh.appendRow([caseId,new Date(),intent,email,name,phone,subject,place,details,
+    sh.appendRow([caseId,new Date(),intent,email,sheetText_(name),sheetText_(phone),sheetText_(subject),sheetText_(place),sheetText_(details),
       input.wantsReply==='yes'?'ต้องการแจ้งผล':'ไม่ต้องการแจ้งผล','DRAFT',folder.getId(),nonce,'{}']);
     return {caseId,status:'DRAFT'};
   } finally {lock.releaseLock(); }
