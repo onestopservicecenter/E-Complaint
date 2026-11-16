@@ -16,7 +16,8 @@ const REQUIRED_REWARD_DOCS = []; // The latest reward-intent form requires an id
 
 function doGet(e) {
   const intent = (e && e.parameter && e.parameter.intent) === 'reward' ? 'reward' : 'no-reward';
-  const t = HtmlService.createTemplateFromFile(intent === 'reward' ? 'Reward' : 'Intake');
+  const staff = e && e.parameter && e.parameter.view === 'staff';
+  const t = HtmlService.createTemplateFromFile(staff ? 'Staff' : intent === 'reward' ? 'Reward' : 'Intake');
   t.intent = intent;
   t.clientId = INTAKE.GOOGLE_CLIENT_ID;
   return t.evaluate().setTitle('แจ้งข้อร้องเรียน | สสจ.นครปฐม')
@@ -205,4 +206,55 @@ function myComplaintStatus(input) {
   const email=identity_(input&&input.idToken),found=findCase_(sheet_(),cleaned_(input.caseId,50));
   if(found.data[3]!==email) throw Error('ไม่สามารถดูข้อมูลเรื่องนี้ได้');
   return {caseId:found.data[0],status:found.data[10],submittedAt:found.data[1]};
+}
+
+/**
+ * Authorized staff read-only dashboard.
+ * Set STAFF_EMAILS script property with a comma-separated list of approved work emails.
+ * Access is denied by default. The web app runs as the owner, never as the citizen.
+ */
+function staffIdentity_(token) {
+  const email=identity_(token);
+  const configured=PropertiesService.getScriptProperties().getProperty('STAFF_EMAILS')||'';
+  const allowed=configured.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  if(!allowed.includes(email)) throw Error('บัญชีนี้ไม่มีสิทธิ์ดูข้อมูลร้องเรียน');
+  return email;
+}
+function staffComplaintList(input) {
+  staffIdentity_(input&&input.idToken);
+  const sh=sheet_();
+  const last=sh.getLastRow();
+  if(last<2)return [];
+  const rows=sh.getRange(Math.max(2,last-199),1,Math.min(198,last-1),14).getValues();
+  return rows.reverse().filter(r=>r[10]!=='DRAFT').map(r=>({
+    caseId:String(r[0]),createdAt:r[1] instanceof Date?r[1].toISOString():String(r[1]),
+    intent:r[2],name:r[4],subject:r[6],status:r[10]
+  }));
+}
+function staffComplaintDetail(input) {
+  staffIdentity_(input&&input.idToken);
+  const sh=sheet_(),found=findCase_(sh,cleaned_(input.caseId,50));
+  const row=found.data;
+  if(row[10]==='DRAFT')throw Error('เรื่องร้องเรียนนี้ยังไม่ได้ส่ง');
+  assertPrivateFolders_();
+  const folder=DriveApp.getFolderById(row[11]);
+  const files=folder.getFilesByName('คำร้อง.json');
+  if(!files.hasNext())throw Error('ไม่พบข้อมูลรายละเอียดคำร้อง');
+  const record=JSON.parse(files.next().getBlob().getDataAsString('UTF-8'));
+  return {caseId:row[0],status:row[10],createdAt:row[1] instanceof Date?row[1].toISOString():String(row[1]),
+    record,evidence:JSON.parse(row[13]||'{}')};
+}
+function staffComplaintFile(input) {
+  staffIdentity_(input&&input.idToken);
+  const found=findCase_(sheet_(),cleaned_(input.caseId,50)),row=found.data;
+  if(row[10]==='DRAFT')throw Error('เรื่องร้องเรียนยังไม่ได้ส่ง');
+  assertPrivateFolders_();
+  const fileId=cleaned_(input.fileId,150);
+  const uploads=JSON.parse(row[13]||'{}');
+  const belongs=Object.keys(uploads).some(k=>(uploads[k]||[]).some(v=>v.fileId===fileId));
+  if(!belongs)throw Error('ไฟล์นี้ไม่ใช่หลักฐานของเรื่องร้องเรียน');
+  const f=DriveApp.getFileById(fileId);
+  const blob=f.getBlob();
+  if(blob.getBytes().length>10*1024*1024)throw Error('ไฟล์เกินขนาดที่กำหนด');
+  return {name:f.getName(),mime:blob.getContentType(),base64:Utilities.base64Encode(blob.getBytes())};
 }
