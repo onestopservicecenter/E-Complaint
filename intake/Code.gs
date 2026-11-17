@@ -29,14 +29,17 @@ function setupIntake() {
   if (INTAKE.GOOGLE_CLIENT_ID.startsWith('SET_')) throw Error('โปรดกำหนด GOOGLE_CLIENT_ID');
   const props = PropertiesService.getScriptProperties();
   if (props.getProperty(INTAKE.SHEET_PROP)) {
-    ensureAuditSheet_(SpreadsheetApp.openById(props.getProperty(INTAKE.SHEET_PROP)));
-    return 'ตั้งค่าฐานข้อมูลและ Audit Log แล้ว';
+    const existing=SpreadsheetApp.openById(props.getProperty(INTAKE.SHEET_PROP));
+    ensureAuditSheet_(existing);
+    ensureResponsesSheet_(existing);
+    return 'ตั้งค่าฐานข้อมูล Audit Log และระบบแจ้งผลแล้ว';
   }
   const ss = SpreadsheetApp.create('E-Complaint Intake Registry - Confidential');
   const sh = ss.getSheets()[0];
   sh.setName('Cases'); sh.appendRow(INTAKE.HEADERS);
   sh.setFrozenRows(1);
   ensureAuditSheet_(ss);
+  ensureResponsesSheet_(ss);
   props.setProperty(INTAKE.SHEET_PROP, ss.getId());
   return ss.getUrl();
 }
@@ -84,10 +87,32 @@ function ensureAuditSheet_(ss) {
 }
 function writeAudit_(action,caseId,actor,role,outcome) {
   const allowed=new Set(['CASE_DRAFT_CREATED','CASE_SUBMITTED','CITIZEN_STATUS_VIEW',
-    'STAFF_CASE_LIST','STAFF_CASE_VIEW','STAFF_EVIDENCE_DOWNLOAD']);
+    'STAFF_CASE_LIST','STAFF_CASE_VIEW','STAFF_EVIDENCE_DOWNLOAD',
+    'STAFF_CASE_STATUS_UPDATE','CITIZEN_REPLY_VIEW']);
   if(!allowed.has(action)) throw Error('Audit event ไม่ได้รับอนุญาต');
   const sh=ensureAuditSheet_(sheet_().getParent());
   sh.appendRow([new Date(),action,caseId||'',sheetText_(actor||''),role,outcome||'SUCCESS']);
+}
+function ensureResponsesSheet_(ss) {
+  let sh=ss.getSheetByName('CaseResponses');
+  if(!sh){
+    sh=ss.insertSheet('CaseResponses');
+    sh.appendRow(['เลขรับเรื่อง','แก้ไขเมื่อ','สถานะ','ผลดำเนินการสำหรับผู้ร้อง','บัญชีเจ้าหน้าที่ผู้บันทึก']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function findResponseRow_(sh,caseId) {
+  const last=sh.getLastRow();
+  if(last<2)return 0;
+  const values=sh.getRange(2,1,last-1,1).getValues();
+  const index=values.findIndex(row=>String(row[0])===caseId);
+  return index<0?0:index+2;
+}
+function safeResponse_(record) {
+  if(!record)return null;
+  return {status:String(record[2]),message:String(record[3]||''),
+    updatedAt:record[1] instanceof Date?record[1].toISOString():String(record[1])};
 }
 function identity_(token) {
   if (INTAKE.GOOGLE_CLIENT_ID.startsWith('SET_')) throw Error('ยังไม่ได้ตั้งค่า Google Login');
@@ -233,8 +258,14 @@ function finishComplaint(input) {
 function myComplaintStatus(input) {
   const email=identity_(input&&input.idToken),found=findCase_(sheet_(),cleaned_(input.caseId,50));
   if(found.data[3]!==email) throw Error('ไม่สามารถดูข้อมูลเรื่องนี้ได้');
+  const replies=ensureResponsesSheet_(sheet_().getParent());
+  const index=findResponseRow_(replies,found.data[0]);
+  const response=index?safeResponse_(replies.getRange(index,1,1,5).getValues()[0]):null;
   writeAudit_('CITIZEN_STATUS_VIEW',found.data[0],email,'CITIZEN','SUCCESS');
-  return {caseId:found.data[0],status:found.data[10],submittedAt:found.data[1]};
+  if(response)writeAudit_('CITIZEN_REPLY_VIEW',found.data[0],email,'CITIZEN','SUCCESS');
+  return {caseId:found.data[0],status:found.data[10],
+    submittedAt:found.data[1] instanceof Date?found.data[1].toISOString():String(found.data[1]),
+    response};
 }
 
 /**
@@ -289,4 +320,35 @@ function staffComplaintFile(input) {
   if(blob.getBytes().length>10*1024*1024)throw Error('ไฟล์เกินขนาดที่กำหนด');
   writeAudit_('STAFF_EVIDENCE_DOWNLOAD',row[0],actor,'STAFF','SUCCESS');
   return {name:f.getName(),mime:blob.getContentType(),base64:Utilities.base64Encode(blob.getBytes())};
+}
+
+/**
+ * Staff response workflow (test-only until staff username/password and production owner are configured).
+ * Never sends Gmail or files; citizen must sign in with the original verified Google account.
+ * Only a short case outcome belongs here; no identity numbers, details about third parties or attachments.
+ */
+function staffUpdateCase(input) {
+  const actor=staffIdentity_(input&&input.idToken);
+  const caseId=cleaned_(input.caseId,50);
+  const allowed=['RECEIVED','IN_REVIEW','NEED_INFORMATION','COMPLETED','CLOSED'];
+  const next=cleaned_(input.status,40);
+  const message=cleaned_(input.message,2000);
+  if(!allowed.includes(next))throw Error('สถานะไม่ถูกต้อง');
+  if(!message || message.length<5)throw Error('กรุณากรอกข้อความแจ้งผลอย่างน้อย 5 ตัวอักษร');
+  if(/(?:\d[ -]?){13}/.test(message))throw Error('ห้ามใส่เลขบัตรประชาชนในข้อความแจ้งผล');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+    assertPrivateFolders_();
+    const sh=sheet_(),found=findCase_(sh,caseId),row=found.data;
+    if(row[10]==='DRAFT')throw Error('คำร้องยังไม่ได้ส่ง');
+    const replies=ensureResponsesSheet_(sh.getParent());
+    const existing=findResponseRow_(replies,caseId);
+    const now=new Date();
+    const values=[caseId,now,next,sheetText_(message),actor];
+    if(existing)replies.getRange(existing,1,1,5).setValues([values]);
+    else replies.appendRow(values);
+    sh.getRange(found.row,11).setValue(next);
+    writeAudit_('STAFF_CASE_STATUS_UPDATE',caseId,actor,'STAFF','SUCCESS');
+    return {caseId,status:next,updatedAt:now.toISOString()};
+  }finally{lock.releaseLock();}
 }
