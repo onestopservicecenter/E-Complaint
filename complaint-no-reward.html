@@ -86,7 +86,7 @@ ul{margin:5px 0 0;padding-left:22px}strong{font-weight:700}fieldset{border:0;pad
   const link=document.getElementById("openRealForm");
   try{
     const parsed=new URL(url);
-    if(parsed.protocol==="https:" && parsed.hostname==="script.google.com" && /^\\/macros\\/s\\/[^/]+\\/exec$/.test(parsed.pathname)){
+    if(parsed.protocol==="https:" && parsed.hostname==="script.google.com" && parsed.pathname.startsWith("/macros/s/") && parsed.pathname.endsWith("/exec") && parsed.pathname.split("/").length===5){
       parsed.searchParams.set("intent","no-reward");
       link.href=parsed.href;
       link.hidden=false;
