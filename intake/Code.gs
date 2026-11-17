@@ -11,6 +11,7 @@ const INTAKE = Object.freeze({
   GOOGLE_CLIENT_ID: 'SET_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com',
   SHEET_PROP: 'INTAKE_SPREADSHEET_ID',
   TZ: 'Asia/Bangkok',
+  REQUIRED_OWNER_EMAIL: 'ossc73@gmail.com',
   HEADERS: ['เลขรับเรื่อง','วันที่บันทึก','สินบนนำจับ','บัญชีผู้ยื่น','ชื่อผู้ยื่น','โทรศัพท์','เรื่อง','สถานที่','รายละเอียด','แจ้งผล','สถานะ','โฟลเดอร์','clientNonce','หลักฐาน_JSON','วันที่ยื่นสำเร็จ']
 });
 const REQUIRED_REWARD_DOCS = []; // The latest reward-intent form requires an identity-card image instead of four PDFs.
@@ -47,7 +48,29 @@ function setupIntake() {
   props.setProperty(INTAKE.SHEET_PROP, ss.getId());
   return ss.getUrl();
 }
+function verifyProductionOwnership_() {
+  const effective=(Session.getEffectiveUser().getEmail()||'').toLowerCase();
+  if(effective!==INTAKE.REQUIRED_OWNER_EMAIL)
+    throw Error('ไม่อนุญาตให้รับเรื่อง: Apps Script ต้องดำเนินการด้วยบัญชีกลางของหน่วยงาน');
+  for (const id of [INTAKE.ROOT,INTAKE.REWARD,INTAKE.NO_REWARD]) {
+    const folder=DriveApp.getFolderById(id);
+    const owner=folder.getOwner();
+    if(!owner||owner.getEmail().toLowerCase()!==INTAKE.REQUIRED_OWNER_EMAIL)
+      throw Error('ไม่อนุญาตให้รับเรื่อง: โฟลเดอร์ Production ยังไม่ได้เป็นของบัญชีกลาง');
+  }
+}
+function checkDeploymentReadiness() {
+  // Run manually in Apps Script editor using the intended production owner.
+  // Throws safely before any live complaint is accepted.
+  verifyProductionOwnership_();
+  assertPrivateFolders_();
+  if(INTAKE.GOOGLE_CLIENT_ID.startsWith('SET_'))throw Error('ยังไม่มี Google OAuth Client ID');
+  if(!PropertiesService.getScriptProperties().getProperty(INTAKE.SHEET_PROP))
+    throw Error('ยังไม่ได้สร้างทะเบียนคำร้อง');
+  return 'ผ่านการตรวจบัญชีเจ้าของ โฟลเดอร์ส่วนตัว และทะเบียน แต่ยังต้องทดสอบ Google Login และสิทธิ์ Staff แบบ end-to-end';
+}
 function assertPrivateFolders_() {
+  verifyProductionOwnership_();
   const root = DriveApp.getFolderById(INTAKE.ROOT);
   const checked = new Set();
   // Check all ancestor folders too: a shared ancestor may expose inherited child data.
