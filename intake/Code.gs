@@ -202,6 +202,9 @@ function startComplaint(input) {
     altEmail=cleaned_(input.altEmail,255),lineId=cleaned_(input.lineId,100),
     desiredAction=cleaned_(input.desiredAction,3000),eventDate=cleaned_(input.eventDate,20);
   if(!name||!subject||!place||!details||!phone) throw Error('กรุณากรอกข้อมูลจำเป็นให้ครบถ้วน');
+  if(nationalId && intent!=='reward')throw Error('แบบฟอร์มประเภทนี้ไม่รับเลขบัตรประชาชน');
+  if(['inspection','ossc'].includes(intent) && input.acceptTerms!==true)
+    throw Error('กรุณายืนยันข้อเท็จจริงและรับทราบการใช้ข้อมูลก่อนแจ้งเรื่อง');
   if(intent==='reward') {
     if(!input.acceptTerms) throw Error('กรุณายอมรับข้อตกลงและหลักเกณฑ์');
     if(!/^\d{13}$/.test(nationalId)) throw Error('กรุณากรอกเลขบัตรประชาชน 13 หลัก');
