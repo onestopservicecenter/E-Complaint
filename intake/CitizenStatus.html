@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="th"><head><base target="_top"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*{box-sizing:border-box}body{font-family:Tahoma,"Noto Sans Thai",sans-serif;background:#f4f8fc;color:#173955;margin:0;padding:16px}
+main{max-width:700px;margin:18px auto;background:white;border:1px solid #d7e6f4;border-radius:16px;padding:26px}
+h1{font-size:25px;color:#07528e;margin:0 0 14px}h2{font-size:19px;color:#07528e}
+label{display:block;font-weight:600;margin:16px 0 7px}input{font:inherit;border:1px solid #bad0e3;border-radius:8px;padding:12px;width:100%}
+button{background:#0869b4;color:white;font:inherit;font-weight:700;border:0;border-radius:8px;padding:12px 20px;margin-top:16px;cursor:pointer}
+button:disabled{opacity:.6}#result{border:1px solid #d9e6f2;border-radius:10px;padding:17px;margin-top:20px;background:#f6faff;line-height:1.75}
+#result[hidden],#lookup[hidden]{display:none}#message{white-space:pre-wrap;overflow-wrap:anywhere}
+.notice{font-size:13px;color:#526b80;line-height:1.8}
+</style></head><body><main>
+<h1>ติดตามเรื่องร้องเรียนและอ่านผลการดำเนินงาน</h1>
+<p class="notice">กรุณาเข้าสู่ระบบด้วยบัญชี Google เดียวกับที่ใช้ยื่นเรื่อง ข้อมูลผู้ร้องและผลการดำเนินงานจะไม่แสดงแก่บัญชีอื่น</p>
+<div id="googleButton"></div><p id="signedIn" class="notice">ยังไม่ได้เข้าสู่ระบบ</p>
+<form id="lookup" hidden><label for="caseId">เลขรับเรื่องร้องเรียน</label>
+<input id="caseId" required maxlength="50" pattern="NPT-[0-9]{8}-[A-F0-9]{8}" placeholder="NPT-YYYYMMDD-XXXXXXXX" autocomplete="off">
+<button id="search" type="submit">ตรวจสอบสถานะ</button></form>
+<div id="result" role="status" aria-live="polite" hidden>
+<h2 id="statusTitle"></h2><p id="message"></p><p class="notice" id="updated"></p></div>
+</main><script>
+const CLIENT_ID=<?= JSON.stringify(clientId) ?>;
+let token='';const el=id=>document.getElementById(id);
+function show(status,message,updated=''){el('result').hidden=false;el('statusTitle').textContent=status;el('message').textContent=message;el('updated').textContent=updated;}
+window.addEventListener('load',()=>{
+ if(CLIENT_ID.startsWith('SET_')){show('ระบบยังไม่เปิดให้บริการ','ยังไม่ได้ตั้งค่าการเข้าสู่ระบบ Google');return;}
+ if(!window.google?.accounts?.id){show('เกิดข้อผิดพลาด','ไม่สามารถโหลด Google Login');return;}
+ google.accounts.id.initialize({client_id:CLIENT_ID,callback:r=>{
+ token=r.credential||'';try{
+  const info=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+  el('signedIn').textContent='บัญชีที่เข้าสู่ระบบ: '+info.email;el('lookup').hidden=false;el('result').hidden=true;
+ }catch{show('เข้าสู่ระบบไม่สำเร็จ','กรุณาลองใหม่');}
+ },auto_select:false});
+ google.accounts.id.renderButton(el('googleButton'),{theme:'outline',size:'large',text:'signin_with'});
+});
+el('lookup').addEventListener('submit',async ev=>{
+ ev.preventDefault();if(!token)return;
+ const caseId=el('caseId').value.trim();if(!el('caseId').checkValidity())return;
+ el('search').disabled=true;show('กำลังตรวจสอบ','กำลังตรวจสอบสิทธิ์บัญชีผู้ร้องเรียน...');
+ try{
+ const item=await new Promise((ok,no)=>google.script.run.withSuccessHandler(ok).withFailureHandler(no).myComplaintStatus({idToken:token,caseId}));
+ const labels={DRAFT:'ยังไม่ส่งเรื่อง',SUBMITTED:'ส่งเรื่องแล้ว',RECEIVED:'รับเรื่องแล้ว',IN_REVIEW:'อยู่ระหว่างตรวจสอบ',NEED_INFORMATION:'ขอข้อมูลเพิ่มเติม',COMPLETED:'ดำเนินการแล้วเสร็จ',CLOSED:'ยุติเรื่อง'};
+ show('เลขรับเรื่อง '+item.caseId+' — '+(labels[item.status]||item.status),
+  item.response?.message||'ยังไม่มีข้อความแจ้งผลจากเจ้าหน้าที่',
+  item.response?.updatedAt?'ปรับปรุงล่าสุด: '+new Date(item.response.updatedAt).toLocaleString('th-TH'):'');
+ }catch(err){show('ไม่สามารถแสดงข้อมูลได้',err.message||String(err));}
+ finally{el('search').disabled=false;}
+});
+</script></body></html>
