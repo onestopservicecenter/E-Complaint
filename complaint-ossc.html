@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>ร้องเรียนการบริการ OSSC | E-Complaint</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f2f7fc;color:#183755;font-family:Tahoma,"Noto Sans Thai",sans-serif}
+main{max-width:850px;margin:20px auto;padding:clamp(18px,4vw,34px);background:white;border:1px solid #d8e5f1;border-radius:16px}
+header{text-align:center}h1{font-size:clamp(23px,3vw,30px);color:#0a4d85}header p{color:#5a7085}h2{font-size:19px;color:#084d87;margin:0 0 15px}
+section{border:1px solid #d6e5f0;border-radius:12px;padding:18px;margin:18px 0}label{display:block;font-weight:700;font-size:14px;margin-bottom:6px}
+input:not([type=checkbox]):not([type=radio]),textarea{width:100%;font:inherit;border:1px solid #b9d0e1;border-radius:8px;padding:11px;background:white}
+textarea{min-height:115px;resize:vertical}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{margin-bottom:16px}
+small{display:block;font-size:12px;color:#62788a;line-height:1.7;margin-top:6px}button{border:0;border-radius:9px;background:#0a70b7;color:white;font:inherit;font-weight:700;padding:12px 20px;cursor:pointer}button:disabled{background:#8baac3}
+.choice{display:flex;align-items:start;gap:9px;line-height:1.7}.choice input{margin-top:5px}.message{padding:14px;border:1px solid #c5dff2;background:#edf7ff;border-radius:9px;line-height:1.7;margin-top:16px}
+.error{background:#fff0f2;color:#8f2140;border-color:#eebdcb}.success{background:#ecf8f0;color:#1c6439;border-color:#a6dbb6}
+[hidden]{display:none!important}@media(max-width:560px){.grid{grid-template-columns:1fr}body{font-size:14px}main{border-radius:0;margin:0;padding:15px}}
+</style></head><body>
+<main><aside style="padding:17px;border-radius:12px;border:1px solid #e7c78d;background:#fff5e7;color:#714609;line-height:1.7"><strong>หน้าแบบฟอร์มตัวอย่างสำหรับตรวจสอบเท่านั้น</strong><p>ยังไม่เปิดรับข้อมูลจริงหรือเชื่อม Backend โปรดอย่ากรอกข้อมูลส่วนบุคคล ช่องกรอกและปุ่มส่งถูกปิดใช้งานไว้</p><p>ข้อกำหนดรายละเอียดของแบบฟอร์มยังต้องให้หน่วยงานตรวจสอบและอนุมัติ</p><a href="index.html#complaint">กลับไปหน้าเลือกประเภทการแจ้งเรื่อง</a></aside><header><h1>ร้องเรียนการบริการ OSSC</h1><p>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข สำนักงานสาธารณสุขจังหวัดนครปฐม</p></header>
+<section><h2>เข้าสู่ระบบด้วย Google</h2><div id="googleButton"><strong>เข้าสู่ระบบ Google — ยังไม่เปิดใช้งานในหน้าตัวอย่าง</strong></div><p id="identity">ยังไม่ได้เข้าสู่ระบบ</p>
+<small>ระบบจะบันทึกบัญชี Google ที่ยืนยันตัวตนเพื่อผูกกับเลขรับเรื่อง และใช้ติดตามผลภายหลัง</small></section>
+<form id="requestForm" hidden>
+<section><h2>ข้อมูลผู้แจ้งเรื่อง</h2>
+<div class="grid"><div class="field"><label for="name">ชื่อ-สกุล *</label><input id="name" required maxlength="150" autocomplete="name"></div>
+<div class="field"><label for="phone">หมายเลขโทรศัพท์ที่ติดต่อได้ *</label><input id="phone" required maxlength="30" type="tel" autocomplete="tel"></div></div>
+<div class="field"><label for="altEmail">อีเมลสำหรับติดต่อเพิ่มเติม (ถ้ามี)</label><input id="altEmail" type="email" maxlength="255"></div>
+</section>
+<section><h2>รายละเอียดเรื่องที่แจ้ง</h2>
+<div class="field"><label for="subject">หัวข้อเรื่อง *</label><input id="subject" required maxlength="200"></div>
+<div class="field"><label for="place">ช่องบริการหรือสถานที่ให้บริการ OSSC *</label><textarea id="place" required maxlength="500" placeholder="ระบุจุดบริการหรือช่องบริการ (ถ้าทราบ)"></textarea></div>
+<div class="grid"><div class="field"><label for="eventDate">วันที่พบเหตุการณ์ (ถ้าทราบ)</label><input id="eventDate" type="date"></div>
+<div class="field"><label for="categoryDetail">ประเภทบริการที่ติดต่อ (ถ้าทราบ)</label><input id="categoryDetail" maxlength="200"></div></div>
+<div class="field"><label for="details">รายละเอียดและข้อเท็จจริง *</label><textarea id="details" required maxlength="8000"></textarea><small>ระบุเหตุการณ์ที่พบ วันเวลา และข้อเสนอแนะหรือการแก้ไขที่ต้องการ</small></div>
+<div class="field"><label for="desiredAction">สิ่งที่ต้องการให้หน่วยงานดำเนินการ</label><textarea id="desiredAction" maxlength="3000"></textarea></div>
+<div class="field"><label for="evidence">แนบภาพ เสียง วิดีโอ หรือ PDF (ถ้ามี)</label><input id="evidence" type="file" multiple accept="image/jpeg,image/png,image/webp,audio/mpeg,audio/wav,audio/ogg,video/mp4,application/pdf"><small>ไม่เกิน 10 MB ต่อไฟล์ สูงสุด 5 ไฟล์ต่อเรื่อง</small></div>
+</section>
+<section><h2>การแจ้งผลและยืนยันข้อมูล</h2>
+<label class="choice"><input type="checkbox" id="wantsReply" checked> ต้องการรับการแจ้งผลผ่านระบบด้วยบัญชี Google ที่ใช้ยื่นเรื่อง</label>
+<label class="choice"><input type="checkbox" id="confirm" required> ข้าพเจ้ารับรองว่าข้อมูลที่แจ้งเป็นความจริงตามที่ทราบและยอมรับการนำข้อมูลไปใช้เพื่อพิจารณาและดำเนินการเกี่ยวกับเรื่องที่แจ้ง</label>
+<small>โปรดตรวจสอบประกาศความเป็นส่วนตัวของหน่วยงานก่อนเปิดรับข้อมูลจริง</small>
+<button id="send" type="submit">ส่งเรื่อง</button></section></form>
+<div id="message" role="status" aria-live="polite" class="message" hidden></div>
+</main><script>
+document.addEventListener("DOMContentLoaded",function(){
+ const form=document.getElementById("requestForm");
+ form.hidden=false;
+ for(const element of form.querySelectorAll("input,textarea,select,button"))element.disabled=true;
+ form.addEventListener("submit",event=>event.preventDefault());
+});
+</script></body></html>
