@@ -109,7 +109,7 @@ button{background:#0869b4;color:white;border:0;border-radius:8px;padding:13px 22
   const link=document.getElementById("openRealForm");
   try{
     const parsed=new URL(url);
-    if(parsed.protocol==="https:" && parsed.hostname==="script.google.com" && /^\\/macros\\/s\\/[^/]+\\/exec$/.test(parsed.pathname)){
+    if(parsed.protocol==="https:" && parsed.hostname==="script.google.com" && parsed.pathname.startsWith("/macros/s/") && parsed.pathname.endsWith("/exec") && parsed.pathname.split("/").length===5){
       parsed.searchParams.set("intent","reward");
       link.href=parsed.href;
       link.hidden=false;
