@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<script defer src="complaint-public-config.js"></script>
+<style>
+:root{--blue:#0869b4;--ink:#113a65;--border:#d6e4f1}*{box-sizing:border-box}
+body{font-family:Tahoma,"Noto Sans Thai",sans-serif;background:#f5f9ff;color:#163652;margin:0;padding:20px}
+main{max-width:860px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:18px;padding:clamp(18px,4vw,34px)}
+h1{font-size:clamp(24px,3vw,32px);text-align:center;color:var(--ink);margin:0 0 6px}
+h2{font-size:19px;color:var(--ink);margin:0 0 15px}
+.subtitle{text-align:center;color:#52687f;margin:0 0 26px}
+section{border:1px solid var(--border);border-radius:14px;padding:18px;margin-top:16px}
+label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+input,textarea,select{width:100%;border:1px solid #bcd0e1;border-radius:8px;padding:11px 12px;font:inherit;color:#173553;background:#fff}
+textarea{min-height:125px;resize:vertical}input:focus,textarea:focus{outline:2px solid #78baf6;outline-offset:1px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{margin-bottom:15px}.required{color:#bc2941}
+.help{font-size:12px;color:#60768b;line-height:1.6;margin-top:6px}
+button{font:inherit;background:var(--blue);border:0;color:white;border-radius:8px;padding:13px 22px;cursor:pointer;font-weight:700}
+button:hover{background:#064983}button:disabled{background:#89acc7;cursor:wait}
+.alert{padding:14px;border-radius:8px;background:#f0f5fa;border:1px solid #d1e3f2;margin-top:16px;line-height:1.7}
+.error{background:#fff2f3;border-color:#f3c3cd;color:#9d2037}.success{background:#e9f7ef;border-color:#b4e2c5;color:#18623c}
+.identity{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+ul{margin:5px 0 0;padding-left:22px}strong{font-weight:700}fieldset{border:0;padding:0;margin:0 0 15px}legend{font-weight:700;margin-bottom:10px}
+.choice{display:inline-flex;align-items:center;gap:7px;margin-right:20px;font-weight:400}.choice input{width:auto}
+#result[hidden],#formBody[hidden],#rewardDocs[hidden]{display:none}
+@media(max-width:560px){.grid{grid-template-columns:1fr}body{padding:8px}main{padding:15px}section{padding:14px}}
+</style><title>ไม่ประสงค์ขอรับเงินสินบนนำจับ | E-Complaint นครปฐม</title><style>
+#publicPreview{background:#fff5e8;color:#64420b;border:1px solid #f5d3a2;border-radius:12px;padding:18px;margin:0 0 20px;line-height:1.7}
+#publicPreview a{color:#095c99;text-decoration:underline}#openRealForm{display:inline-block;background:#075fa4;color:white!important;text-decoration:none!important;border-radius:8px;padding:10px 16px;margin-top:12px;font-weight:bold}#openRealForm[hidden]{display:none}
+#previewFormNote{font-size:13px;color:#5a6c7b}button:disabled,input:disabled,textarea:disabled{cursor:not-allowed;opacity:.75}
+</style></head><body>
+<main><aside id="publicPreview" role="status"><strong>ตัวอย่างหน้าแบบฟอร์มบน GitHub Pages — ยังไม่เปิดรับข้อมูลจริง</strong><p id="notLive">หน้าเว็บนี้ใช้สำหรับตรวจสอบรูปแบบและข้อความเท่านั้น ยังไม่เชื่อมกับระบบรับเรื่องจริง กรุณาอย่ากรอกข้อมูลส่วนบุคคล</p><a id="openRealForm" hidden target="_blank" rel="noopener noreferrer">เปิดแบบฟอร์มรับเรื่องจริง</a><p id="previewFormNote">การรับข้อมูลจริงต้องมี Google Login, Backend ที่ติดตั้งภายใต้บัญชีกลาง และการตรวจสอบสิทธิ์ผ่านการทดสอบก่อน</p><a href="index.html#complaint">กลับไปหน้าเลือกประเภทการร้องเรียน</a></aside>
+<h1>แจ้งข้อร้องเรียน</h1>
+<p id="subtitle" class="subtitle"></p>
+<section aria-label="ยืนยันตัวตนด้วย Google">
+  <h2>เข้าสู่ระบบด้วยบัญชี Google</h2>
+  <div class="identity"><div id="googleButton"><p><strong>เข้าสู่ระบบ Google (รอเชื่อมระบบรับเรื่องจริง)</strong></p></div><strong id="identityText">ยังไม่ได้เข้าสู่ระบบ</strong></div>
+  <p class="help">ใช้บัญชี Google เพื่อระบุผู้ยื่นเรื่องและใช้ตรวจสอบข้อมูลที่ส่ง</p>
+</section>
+<form id="complaintForm" novalidate>
+<div id="formBody">
+<section>
+  <h2>ข้อมูลผู้ร้องเรียน</h2>
+  <div class="grid">
+    <div class="field"><label for="name">ชื่อ - นามสกุล <span class="required">*</span></label><input id="name" maxlength="150" required autocomplete="name"></div>
+    <div class="field"><label for="phone">โทรศัพท์ <span class="required">*</span></label><input id="phone" type="tel" maxlength="30" required autocomplete="tel"></div>
+  </div>
+  <div class="field" id="nationalIdField"><label for="nationalId">เลขบัตรประจำตัวประชาชน <span class="required">*</span></label><input id="nationalId" inputmode="numeric" pattern="[0-9]{13}" maxlength="13" autocomplete="off"><div class="help">กรอกเฉพาะกรณีประสงค์ขอรับเงินสินบนนำจับ</div></div>
+  <fieldset><legend>การแจ้งผลกลับ</legend><label class="choice"><input type="radio" name="wantsReply" value="yes" checked> ต้องการให้แจ้งผลกลับ</label><label class="choice"><input type="radio" name="wantsReply" value="no"> ไม่ต้องการให้แจ้งผลกลับ</label></fieldset>
+</section>
+<section>
+  <h2>รายละเอียดการร้องเรียน</h2>
+  <div class="field"><label for="subject">เรื่องที่ร้องเรียน <span class="required">*</span></label><input id="subject" required maxlength="200"></div>
+  <div class="field"><label for="place">ชื่อ/ที่ตั้งสถานประกอบการ หรือสถานที่เกิดเหตุ <span class="required">*</span></label><textarea id="place" required maxlength="500"></textarea></div>
+  <div class="field"><label for="details">รายละเอียดเรื่องร้องเรียน <span class="required">*</span></label><textarea id="details" required maxlength="8000"></textarea></div>
+</section>
+<section>
+  <h2>หลักฐานประกอบ</h2>
+  <div class="field"><label for="images">รูปภาพหลักฐาน 1–4 ภาพ <span class="required">*</span></label><input id="images" type="file" multiple required accept="image/jpeg,image/png,image/webp"><div class="help">JPG / PNG / WebP ไม่เกิน 5 MB ต่อภาพ</div></div>
+  <div class="field"><label for="video">วิดีโอประกอบ (ถ้ามี)</label><input id="video" type="file" accept="video/mp4"><div class="help">MP4 ไม่เกิน 12 MB</div></div>
+  <div id="rewardDocs" hidden>
+    <h2>เอกสารสำหรับขอรับเงินสินบนนำจับ</h2>
+    <div class="field"><label for="NJ1">แบบ น.จ.1 (PDF) <span class="required">*</span></label><input id="NJ1" type="file" accept="application/pdf"></div>
+    <div class="field"><label for="BANK_REQUEST">แบบคำขอรับเงินผ่านธนาคาร (PDF) <span class="required">*</span></label><input id="BANK_REQUEST" type="file" accept="application/pdf"></div>
+    <div class="field"><label for="ID_COPY">สำเนาบัตรประชาชน (PDF) <span class="required">*</span></label><input id="ID_COPY" type="file" accept="application/pdf"></div>
+    <div class="field"><label for="BOOKBANK_COPY">สำเนา Bookbank (PDF) <span class="required">*</span></label><input id="BOOKBANK_COPY" type="file" accept="application/pdf"></div>
+    <p class="help">เอกสาร PDF ไม่เกิน 10 MB ต่อไฟล์</p>
+  </div>
+</section>
+<section>
+  <label class="choice"><input id="consent" type="checkbox" required> ยืนยันว่าข้อมูลที่แจ้งเป็นความจริงและรับทราบว่าจะนำข้อมูลไปใช้เพื่อดำเนินการเกี่ยวกับเรื่องร้องเรียน</label>
+  <p class="help">โปรดตรวจสอบประกาศการคุ้มครองข้อมูลส่วนบุคคลของหน่วยงานก่อนเปิดใช้ระบบจริง</p>
+  <button id="send" type="submit">ส่งเรื่องร้องเรียน</button>
+</section>
+</div>
+</form>
+<div id="result" class="alert" role="status" aria-live="polite" hidden></div>
+</main>
+<script>
+(function(){
+  "use strict";
+  const form=document.querySelector("form");
+  const all=document.querySelectorAll("input, textarea, select, button");
+  all.forEach(e=>{e.disabled=true;});
+  const url=window.ECOMPLAINT_INTAKE_WEBAPP_URL;
+  const link=document.getElementById("openRealForm");
+  try{
+    const parsed=new URL(url);
+    if(parsed.protocol==="https:" && parsed.hostname==="script.google.com" && /^\\/macros\\/s\\/[^/]+\\/exec$/.test(parsed.pathname)){
+      parsed.searchParams.set("intent","no-reward");
+      link.href=parsed.href;
+      link.hidden=false;
+      document.getElementById("notLive").textContent="หน้า GitHub นี้เป็นตัวอย่างสำหรับตรวจสอบแบบฟอร์ม การยื่นเรื่องจริงจะเปิด Google Apps Script ที่ผ่านการตั้งค่าแล้วในหน้าต่างใหม่";
+    }
+  }catch(_){}
+  if(form)form.addEventListener("submit",e=>e.preventDefault());
+})();
+</script></body></html>
