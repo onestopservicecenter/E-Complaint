@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>Staff & Admin Portal | E-Complaint นครปฐม</title>
+<style>
+:root{--forest:#073f3d;--forest2:#0b5550;--ink:#173b47;--muted:#637c86;--line:#dae9e8;--wash:#f1f8f6;--mint:#d7f2e8;--white:#fff;--blue:#2368ba;--warn:#985a1a;--shadow:0 16px 45px rgba(6,57,55,.11)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Tahoma,"Noto Sans Thai",Arial,sans-serif;color:var(--ink);background:linear-gradient(120deg,#f5faf9,#eaf7f4);min-height:100vh}button,input,select,textarea{font:inherit}a{color:inherit}
+button{cursor:pointer;border-radius:10px;border:1px solid transparent}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #83c2ec;outline-offset:2px}
+[hidden]{display:none!important}.main-header{background:white;padding:17px clamp(18px,3vw,50px);min-height:105px;display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid #e0ebec}
+.brand{display:flex;gap:15px;align-items:center;text-decoration:none}.logo{display:grid;place-items:center;width:60px;height:60px;border-radius:17px;background:#e4f5f0;color:#075750;font-weight:900;font-size:25px;border:1px solid #d1ebe1}
+.brand strong{display:block;color:#083f58;font-size:18px}.brand small{display:block;color:#50707b;font-size:12px;margin-top:3px}
+.top-link{text-decoration:none;color:#08635c;font-size:13px;font-weight:700;padding:11px 16px;border-radius:8px;background:#edf6f4}
+.stage{max-width:1340px;margin:0 auto;padding:30px 22px 70px}
+.demo-notice{background:#fff5e6;color:#68410e;border:1px solid #f0d4a5;border-radius:12px;padding:13px 18px;font-size:13px;line-height:1.8;margin:0 auto 24px;max-width:1120px}
+.login-card{max-width:440px;margin:65px auto 80px;background:white;border-radius:22px;padding:36px;box-shadow:var(--shadow);border:1px solid #dce9e8}
+.lock{width:62px;height:62px;display:grid;place-items:center;border-radius:16px;background:#e6f6f0;color:#08765e;font-size:31px}
+h1{font-size:24px;margin:20px 0 7px;color:#073f3d}h2{font-size:20px;margin:0 0 6px;color:#0b4546}h3{font-size:16px;margin:0;color:#153f48}
+.subtle{font-size:13px;color:var(--muted);line-height:1.8}.field{margin-top:19px}.field label{display:block;margin-bottom:8px;font-weight:700;font-size:13px}
+.field input,.field select,.field textarea{width:100%;border:1px solid #cddede;border-radius:9px;padding:12px;color:#183d46;background:white}
+.field input{height:46px}.field textarea{min-height:105px;resize:vertical;line-height:1.6}
+.primary{background:var(--forest);color:white;font-weight:700;padding:12px 18px}.primary:hover:not(:disabled){background:#0a605a}.primary:disabled{opacity:.52;cursor:not-allowed}.secondary{background:#eef6f3;color:#07534d;border:1px solid #d9e9e5;padding:11px 15px;font-weight:700}.outline{border:1px solid #b7d5d0;padding:10px 15px;background:white;color:var(--forest)}
+.full{width:100%;margin-top:20px}.login-card footer{margin-top:18px;padding-top:15px;border-top:1px solid var(--line);font-size:12px;color:#698287;text-align:center;line-height:1.8}
+.dashboard{display:grid;grid-template-columns:245px minmax(0,1fr);min-height:650px;background:white;border-radius:20px;overflow:hidden;box-shadow:var(--shadow);border:1px solid #d4e6e2}
+.sidebar{background:#063f3d;color:white;padding:23px 15px;display:flex;flex-direction:column;gap:6px}
+.side-brand{padding:3px 12px 20px;border-bottom:1px solid #3e6b65;margin-bottom:13px}
+.side-brand strong{font-size:20px}.side-brand small{font-size:11px;color:#a3c9c2;display:block;margin-top:5px}
+.nav-btn{padding:13px 14px;color:#cee0dd;background:none;text-align:left;display:flex;gap:10px;align-items:center;border:none;width:100%;font-size:13px}
+.nav-btn:hover,.nav-btn.active{background:#255d58;color:white}.side-foot{font-size:11px;color:#aacbc4;margin-top:auto;padding:15px 9px 4px;line-height:1.7;border-top:1px solid #45746e}
+.workspace{min-width:0;background:#f6faf9}.workspace-top{background:white;border-bottom:1px solid #dbe9e6;padding:20px 28px;display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.role-tag{background:#dff4ec;color:#0b654d;border-radius:100px;padding:7px 12px;font-size:12px;font-weight:700}.workspace-content{padding:26px}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:19px;flex-wrap:wrap}.section-title p{margin:6px 0 0}.muted{color:var(--muted)}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.metric{padding:20px;background:white;border-radius:13px;border:1px solid #dceae6;min-width:0}
+.metric small{display:block;font-size:12px;color:var(--muted);line-height:1.6}.metric strong{display:block;font-size:30px;color:#0c514c;margin-top:7px}
+.panel{padding:21px;background:white;border:1px solid #dbe9e6;border-radius:14px;margin-bottom:18px}.panel-title{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:625px}th{font-size:12px;color:#52767b;background:#f1f7f6;text-align:left;padding:13px}
+td{border-top:1px solid #e8f0ee;padding:13px;font-size:13px;line-height:1.6}.empty{padding:47px 20px;text-align:center;color:#6a858a;line-height:1.8;background:#fbfdfc;border:1px dashed #d2e5dd;border-radius:12px}
+.info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.info-box{background:#f5faf8;border:1px solid #e0eee7;border-radius:11px;padding:15px}.info-box strong{display:block;font-size:13px;margin-bottom:6px}
+.horizontal-form{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.horizontal-form .field{flex:1 1 180px;margin:0}
+.two-column{display:grid;grid-template-columns:1fr 1fr;gap:17px}.step-list{padding-left:20px;line-height:2;color:#496a6e;font-size:13px}
+.preview-watermark{background:#e9f2fa;color:#2a5c81;border-radius:8px;padding:9px 13px;font-size:12px;line-height:1.7}
+.error{color:#92312e;background:#fff0ed;border:1px solid #f0d0c8;padding:12px;border-radius:9px;line-height:1.7;font-size:13px}
+.sr-only{position:absolute;left:-10000px}
+@media(max-width:980px){.cards{grid-template-columns:repeat(2,1fr)}.dashboard{grid-template-columns:210px 1fr}.workspace-content{padding:17px}}
+@media(max-width:700px){.main-header{min-height:85px}.brand strong{font-size:14px}.brand small{font-size:10px}.logo{width:44px;height:44px}.stage{padding:15px 9px 40px}.login-card{margin:32px auto;padding:24px}.dashboard{display:block}.sidebar{padding:13px;gap:0}.side-brand{padding:3px 5px 11px}.sidebar nav{display:flex;overflow:auto;gap:3px}.nav-btn{white-space:nowrap;width:auto;padding:10px}.side-foot{display:none}.workspace-top,.workspace-content{padding:17px}.cards,.two-column,.info-grid{grid-template-columns:1fr}.metric{padding:14px}}
+</style>
+</head><body>
+<header class="main-header">
+ <a class="brand" href="index.html"><span class="logo" aria-hidden="true">✚</span><span><strong>ระบบรับเรื่องร้องเรียน E-Complaint</strong><small>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข · สสจ.นครปฐม</small></span></a>
+ <a class="top-link" href="index.html">กลับหน้าเว็บไซต์ประชาชน</a>
+</header>
+<main class="stage">
+<div class="demo-notice" role="status"><strong>หน้าตัวอย่างการออกแบบ (Preview)</strong> — ไม่มีบัญชีเจ้าหน้าที่จริง ไม่มีข้อมูลร้องเรียน และไม่เชื่อม Backend หรือ Google Drive จนกว่าระบบยืนยันตัวตนและสิทธิ์จะพร้อม ห้ามใช้กรอกข้อมูลส่วนบุคคลจริง</div>
+<section class="login-card" id="loginView" aria-labelledby="loginTitle">
+ <div class="lock" aria-hidden="true">🔐</div>
+ <h1 id="loginTitle">สำหรับเจ้าหน้าที่</h1><p class="subtle">เข้าสู่ระบบเพื่อจัดการเรื่องร้องเรียนและตอบกลับผู้ร้องเรียน</p>
+ <form id="loginForm" autocomplete="off">
+  <div class="field"><label for="username">ชื่อผู้ใช้งาน</label><input id="username" name="username" autocomplete="off" placeholder="Admin จะเป็นผู้สร้างบัญชี" disabled></div>
+  <div class="field"><label for="password">รหัสผ่าน</label><input id="password" name="password" type="password" autocomplete="off" placeholder="รอเปิดระบบยืนยันตัวตน" disabled></div>
+  <button type="submit" class="primary full" disabled>เข้าสู่ระบบ</button>
+ </form>
+ <p class="subtle" style="text-align:center">ระบบ Username/Password ยังอยู่ระหว่างพัฒนาและไม่เปิดให้ทดลองด้วยข้อมูลจริง</p>
+ <button id="previewButton" type="button" class="secondary full">ดูตัวอย่าง Dashboard</button>
+ <footer>สำหรับเจ้าหน้าที่ที่ได้รับสิทธิ์เท่านั้น<br>สำนักงานสาธารณสุขจังหวัดนครปฐม</footer>
+</section>
+<section class="dashboard" id="dashboardView" aria-label="ตัวอย่างหน้าระบบเจ้าหน้าที่" hidden>
+ <aside class="sidebar"><div class="side-brand"><strong>ECOMPLAINT</strong><small>Staff & Admin Portal · Preview</small></div>
+  <nav aria-label="เมนูระบบ">
+   <button type="button" class="nav-btn active" data-view="overview">🏠 ภาพรวม</button>
+   <button type="button" class="nav-btn" data-view="cases">📋 เรื่องร้องเรียน</button>
+   <button type="button" class="nav-btn" data-view="responses">✉️ ตอบกลับผู้ร้องเรียน</button>
+   <button type="button" class="nav-btn" data-view="reports">📊 สถิติและรายงาน</button>
+   <button type="button" class="nav-btn" data-view="audit">🕘 Activity Log</button>
+   <button type="button" class="nav-btn" data-view="users" data-admin-only="true">👥 ผู้ใช้งาน</button>
+   <button type="button" class="nav-btn" data-view="permissions" data-admin-only="true">🔐 กำหนดสิทธิ์</button>
+   <button type="button" class="nav-btn" data-view="settings" data-admin-only="true">⚙️ ตั้งค่าระบบ</button>
+  </nav><div class="side-foot">เมนูนี้เป็นตัวอย่างเท่านั้น<br>สิทธิ์จริงต้องตรวจสอบที่ Backend</div>
+ </aside>
+ <section class="workspace">
+ <div class="workspace-top"><div><h2 id="pageTitle">ภาพรวมระบบ</h2><p class="subtle" id="pageIntro" style="margin:4px 0 0">ภาพรวมการรับเรื่องร้องเรียน</p></div>
+ <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap"><span class="role-tag" id="roleTag">โหมดตัวอย่าง: Staff</span><button id="backToLogin" type="button" class="outline">กลับหน้าเข้าสู่ระบบ</button></div></div>
+ <div class="workspace-content">
+  <div class="preview-watermark" style="margin-bottom:18px">ข้อมูลทั้งหมดในหน้านี้เป็นสถานะว่างสำหรับตรวจสอบ UI ไม่ใช่รายงานหรือข้อมูลการรับเรื่องจริง</div>
+  <div data-page="overview">
+   <div class="cards">
+    <article class="metric"><small>เรื่องร้องเรียนทั้งหมด</small><strong>—</strong></article>
+    <article class="metric"><small>รับเรื่องวันนี้</small><strong>—</strong></article>
+    <article class="metric"><small>อยู่ระหว่างดำเนินการ</small><strong>—</strong></article>
+    <article class="metric"><small>ดำเนินการแล้วเสร็จ</small><strong>—</strong></article>
+   </div>
+   <div class="two-column">
+    <article class="panel"><h3>ภาพรวมตามประเภทคำร้อง</h3><p class="subtle">จำแนกข้อมูล 4 ประเภท</p><div class="empty">ยังไม่มีข้อมูลจาก Backend<br>เมื่อเชื่อมระบบแล้วจะแสดงสถิติของแต่ละประเภท</div></article>
+    <article class="panel"><h3>เรื่องที่ต้องดำเนินการ</h3><p class="subtle">แสดงรายการที่ได้รับมอบหมายตามสิทธิ์</p><div class="empty">ยังไม่มีรายการให้แสดง</div></article>
+   </div>
+  </div>
+  <div data-page="cases" hidden>
+   <div class="panel"><div class="panel-title"><div><h3>รายการเรื่องร้องเรียน</h3><p class="subtle">เจ้าหน้าที่ดูได้เฉพาะเรื่องตามสิทธิ์ที่ Admin กำหนด</p></div></div>
+    <div class="horizontal-form"><div class="field"><label for="filterCategory">ประเภทคำร้อง</label><select id="filterCategory"><option>ทุกประเภทที่ได้รับสิทธิ์</option><option>ประสงค์ขอรับเงินสินบนนำจับ</option><option>ไม่ประสงค์ขอรับเงินสินบนนำจับ</option><option>แจ้งตรวจสอบมาตรฐานฯ</option><option>ร้องเรียนการบริการ OSSC</option></select></div><div class="field"><label for="caseSearch">ค้นหา</label><input id="caseSearch" placeholder="เลขรับเรื่อง หรือหัวข้อ" disabled></div><button class="secondary" type="button" disabled>ค้นหาเรื่อง</button></div>
+    <div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>เลขรับเรื่อง</th><th>วันที่</th><th>ประเภทคำร้อง</th><th>สถานะ</th><th>ผู้รับผิดชอบ</th><th>จัดการ</th></tr></thead></table></div>
+    <div class="empty">ไม่มีข้อมูลจริงในโหมดตัวอย่าง</div>
+   </div>
+  </div>
+  <div data-page="responses" hidden>
+   <article class="panel"><h3>บันทึกผลและตอบกลับผู้ร้องเรียน</h3><p class="subtle">ตัวอย่างขั้นตอนเจ้าหน้าที่ส่งผลผ่านระบบ ไม่ส่งเอกสารผ่านอีเมลโดยไม่ตรวจสิทธิ์</p>
+    <div class="two-column">
+     <div>
+      <div class="field"><label for="replyCase">เลขรับเรื่อง</label><input id="replyCase" placeholder="เลือกจากเรื่องที่มีสิทธิ์รับผิดชอบ" disabled></div>
+      <div class="field"><label for="replyStatus">สถานะการดำเนินงาน</label><select id="replyStatus" disabled><option>รับเรื่องแล้ว</option><option>อยู่ระหว่างตรวจสอบ</option><option>ขอข้อมูลเพิ่มเติม</option><option>ดำเนินการแล้วเสร็จ</option><option>ยุติเรื่อง</option></select></div>
+      <div class="field"><label for="replyText">ข้อความแจ้งผู้ร้องเรียน</label><textarea id="replyText" placeholder="ข้อความที่ผ่านการตรวจสอบและอนุมัติก่อนเผยแพร่" disabled></textarea></div>
+      <div class="field"><label for="replyFile">ไฟล์ผลการดำเนินงาน (ตามสิทธิ์)</label><input id="replyFile" type="file" disabled></div>
+      <button class="primary" type="button" disabled>บันทึกและแจ้งผล</button>
+     </div>
+     <div class="info-box"><strong>ขั้นตอนตอบกลับที่ออกแบบไว้</strong><ol class="step-list"><li>เจ้าหน้าที่เลือกเรื่องตามสิทธิ์</li><li>ตรวจเอกสารและบันทึกผล</li><li>ผู้มีสิทธิ์อนุมัติข้อความและไฟล์</li><li>ระบบผูกผลกับเลขรับเรื่องและบัญชี Google ผู้ร้อง</li><li>ประชาชนเข้าสู่ระบบเพื่อตรวจผลของตนเอง</li><li>บันทึก Audit Log ของทุกการดำเนินการ</li></ol></div>
+    </div>
+   </article>
+  </div>
+  <div data-page="reports" hidden>
+   <div class="cards"><article class="metric"><small>วันนี้ทั้งหมด</small><strong>—</strong></article><article class="metric"><small>ประสงค์สินบนนำจับ</small><strong>—</strong></article><article class="metric"><small>ไม่ประสงค์สินบนนำจับ</small><strong>—</strong></article><article class="metric"><small>แจ้งตรวจสอบ / OSSC</small><strong>—</strong></article></div>
+   <div class="panel"><h3>รายงานตามวันที่</h3><div class="field"><label for="reportDate">เลือกวันที่</label><input type="date" id="reportDate" disabled></div><div class="empty">รอเชื่อมรายงานจาก Backend ที่ตรวจสิทธิ์แล้ว</div></div>
+  </div>
+  <div data-page="audit" hidden><article class="panel"><h3>ประวัติการดำเนินการ (Activity Log)</h3><p class="subtle">บันทึกวันเวลา ผู้ดำเนินการ เลขรับเรื่อง การกระทำ และผลลัพธ์ โดยไม่ใส่เลขบัตรประชาชนหรือไฟล์เอกสารลง Log</p><div class="empty">Log จะถูกดึงจากระบบที่อนุญาตเฉพาะผู้มีสิทธิ์<br>ยังไม่มีข้อมูลในโหมดตัวอย่าง</div></article></div>
+  <div data-page="users" hidden><article class="panel"><h3>จัดการบัญชีเจ้าหน้าที่</h3><p class="subtle">สำหรับ Admin: สร้างบัญชี เปิด-ปิดบัญชี และกำหนดบทบาทผ่าน Backend Authentication ที่ปลอดภัย</p><div class="empty">ยังไม่เปิดสร้าง Username/Password จนกว่าจะเชื่อมระบบบัญชีที่ปลอดภัย</div></article></div>
+  <div data-page="permissions" hidden><article class="panel"><h3>กำหนดสิทธิ์ของเจ้าหน้าที่</h3><div class="info-grid"><div class="info-box"><strong>สิทธิ์เรื่องร้องเรียน</strong><p class="subtle">ดูเรื่อง / ดูหลักฐาน / บันทึกผล / อนุมัติการตอบ / ส่งผล ตามประเภทคำร้อง</p></div><div class="info-box"><strong>สิทธิ์การบริหาร</strong><p class="subtle">จัดการบัญชี / ดูรายงานทุกประเภท / ดู Audit Log / ตั้งค่าระบบ — Admin เท่านั้น</p></div></div></article></div>
+  <div data-page="settings" hidden><article class="panel"><h3>ตั้งค่าระบบ E-Complaint</h3><p class="subtle">บัญชีกลางของหน่วยงาน, นโยบายความเป็นส่วนตัว, สถานะช่องทางแจ้งผล, ระยะเวลาเก็บข้อมูล และการตรวจสอบสิทธิ์</p><div class="empty">ยังไม่มีการเปลี่ยนแปลงค่าของระบบจริง</div></article></div>
+ </div></section>
+</section>
+</main>
+<script>
+(function(){
+ const login=document.getElementById('loginView'),dash=document.getElementById('dashboardView');
+ const titles={overview:['ภาพรวมระบบ','ภาพรวมการรับเรื่องร้องเรียน'],cases:['เรื่องร้องเรียน','ตรวจสอบข้อมูลตามสิทธิ์'],responses:['ตอบกลับผู้ร้องเรียน','ส่งผลดำเนินการผ่านระบบ'],reports:['สถิติและรายงาน','สถิติคำร้องแยกรายวันและประเภท'],audit:['Activity Log','ประวัติการใช้งานระบบ'],users:['ผู้ใช้งาน','จัดการบัญชีเจ้าหน้าที่'],permissions:['กำหนดสิทธิ์','ควบคุมการเข้าถึงข้อมูล'],settings:['ตั้งค่าระบบ','จัดการข้อมูลและนโยบายของหน่วยงาน']};
+ let role='staff';
+ function setView(view){
+  if(!titles[view])return;
+  document.querySelectorAll('[data-page]').forEach(e=>{e.hidden=e.dataset.page!==view});
+  document.querySelectorAll('[data-view]').forEach(e=>e.classList.toggle('active',e.dataset.view===view));
+  document.getElementById('pageTitle').textContent=titles[view][0];
+  document.getElementById('pageIntro').textContent=titles[view][1];
+ }
+ function setRole(next){
+  role=next;document.querySelectorAll('[data-admin-only]').forEach(e=>e.hidden=role!=='admin');
+  document.getElementById('roleTag').textContent='โหมดตัวอย่าง: '+(role==='admin'?'Admin':'Staff');
+  setView('overview');
+ }
+ document.getElementById('loginForm').addEventListener('submit',e=>e.preventDefault());
+ document.getElementById('previewButton').addEventListener('click',()=>{
+  login.hidden=true;dash.hidden=false;setRole('staff');dash.scrollIntoView({behavior:'smooth'});
+ });
+ document.getElementById('backToLogin').addEventListener('click',()=>{
+  dash.hidden=true;login.hidden=false;login.scrollIntoView({behavior:'smooth'});
+ });
+ document.querySelectorAll('[data-view]').forEach(e=>e.addEventListener('click',()=>setView(e.dataset.view)));
+ // Demonstration-only Admin view may be opened by direct URL query for layout review.
+ // This does NOT grant permissions and MUST NEVER be used as authentication.
+ const params=new URLSearchParams(location.search);
+ if(params.get('preview')==='admin'){login.hidden=true;dash.hidden=false;setRole('admin');}
+})();
+</script>
+</body></html>
