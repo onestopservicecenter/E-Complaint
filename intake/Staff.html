@@ -20,7 +20,7 @@ table{border-collapse:collapse;width:100%}th,td{text-align:left;border-bottom:1p
 .hint{font-size:12px;line-height:1.8;color:#496981}
 .summary-bar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:16px}
 .summary-bar label{font-weight:700}.summary-bar input{font:inherit;border:1px solid #b8cfdf;border-radius:8px;padding:10px}
-.summary-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.summary-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
 .summary-cards article{border:1px solid #d4e4ef;background:#f4f9ff;border-radius:10px;padding:16px;text-align:center}
 .summary-cards strong{font-size:29px;color:#0a518c;display:block;font-variant-numeric:tabular-nums}
 .summary-cards span{font-size:13px;display:block}
@@ -38,6 +38,8 @@ table{border-collapse:collapse;width:100%}th,td{text-align:left;border-bottom:1p
 <article><strong id="totalCount">—</strong><span>เรื่องร้องเรียนทั้งหมด</span></article>
 <article><strong id="rewardCount">—</strong><span>ประสงค์ขอรับเงินสินบนนำจับ</span></article>
 <article><strong id="noRewardCount">—</strong><span>ไม่ประสงค์ขอรับเงินสินบนนำจับ</span></article>
+<article><strong id="inspectionCount">—</strong><span>แจ้งตรวจสอบมาตรฐานผลิตภัณฑ์/สถานประกอบการ</span></article>
+<article><strong id="osscCount">—</strong><span>ร้องเรียนการบริการ OSSC</span></article>
 </div><p class="hint">นับจากวันที่ยื่นสำเร็จ (เวลาไทย) ไม่นับคำร้องที่ยังเป็นร่าง และไม่นับจำนวนไฟล์หลักฐาน</p></section>
 <section id="list" hidden><h2>เรื่องร้องเรียนที่ยื่นแล้ว</h2>
 <div class="wrapper"><table><thead><tr><th>เลขรับเรื่อง</th><th>วันที่</th><th>ประเภท</th><th>ผู้ร้องเรียน</th><th>เรื่อง</th><th>สถานะ</th><th>ตรวจสอบ</th></tr></thead><tbody id="rows"></tbody></table></div></section>
@@ -66,7 +68,7 @@ window.addEventListener('load',()=>{if(CLIENT_ID.startsWith('SET_')){msg('ยั
 async function load(){el('list').hidden=true;el('detail').hidden=true;msg('กำลังตรวจสอบสิทธิ์และรายการร้องเรียน...');
  try{const items=await api('staffComplaintList',{idToken:token});const holder=el('rows');holder.replaceChildren();
  for(const item of items){const tr=document.createElement('tr');
- [item.caseId,item.createdAt,item.intent==='reward'?'ประสงค์รับเงินสินบนนำจับ':'ไม่ประสงค์รับเงินสินบนนำจับ',item.name,item.subject,item.status].forEach(x=>addText('td',x,tr));
+ [item.caseId,item.createdAt,({reward:'ประสงค์ขอรับเงินสินบนนำจับ','no-reward':'ไม่ประสงค์ขอรับเงินสินบนนำจับ',inspection:'แจ้งตรวจสอบมาตรฐานผลิตภัณฑ์/สถานประกอบการ',ossc:'ร้องเรียนการบริการ OSSC'}[item.intent]||item.intent),item.name,item.subject,item.status].forEach(x=>addText('td',x,tr));
  const td=document.createElement('td'),btn=addText('button','ดูรายละเอียด',td);btn.onclick=()=>detail(item.caseId);tr.appendChild(td);holder.appendChild(tr);}
  el('list').hidden=false;el('daily').hidden=false;
  if(!el('reportDate').value){
@@ -111,6 +113,8 @@ async function loadDaily(){
    el('totalCount').textContent=sum.total;
    el('rewardCount').textContent=sum.reward;
    el('noRewardCount').textContent=sum.noReward;
+   el('inspectionCount').textContent=sum.inspection;
+   el('osscCount').textContent=sum.ossc;
  }catch(e){msg('โหลดสถิติไม่สำเร็จ: '+(e.message||String(e)),true);}
  finally{btn.disabled=false;}
 }
