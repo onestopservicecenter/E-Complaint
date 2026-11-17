@@ -10,7 +10,8 @@ const INTAKE = Object.freeze({
   NO_REWARD: '1MpWPCtJa5yZmHlwK_n_AOmPpkPKLaERC',
   GOOGLE_CLIENT_ID: 'SET_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com',
   SHEET_PROP: 'INTAKE_SPREADSHEET_ID',
-  HEADERS: ['เลขรับเรื่อง','วันที่บันทึก','สินบนนำจับ','บัญชีผู้ยื่น','ชื่อผู้ยื่น','โทรศัพท์','เรื่อง','สถานที่','รายละเอียด','แจ้งผล','สถานะ','โฟลเดอร์','clientNonce','หลักฐาน_JSON']
+  TZ: 'Asia/Bangkok',
+  HEADERS: ['เลขรับเรื่อง','วันที่บันทึก','สินบนนำจับ','บัญชีผู้ยื่น','ชื่อผู้ยื่น','โทรศัพท์','เรื่อง','สถานที่','รายละเอียด','แจ้งผล','สถานะ','โฟลเดอร์','clientNonce','หลักฐาน_JSON','วันที่ยื่นสำเร็จ']
 });
 const REQUIRED_REWARD_DOCS = []; // The latest reward-intent form requires an identity-card image instead of four PDFs.
 
@@ -33,12 +34,14 @@ function setupIntake() {
     const existing=SpreadsheetApp.openById(props.getProperty(INTAKE.SHEET_PROP));
     ensureAuditSheet_(existing);
     ensureResponsesSheet_(existing);
+    ensureSubmissionColumn_(existing.getSheetByName('Cases'));
     return 'ตั้งค่าฐานข้อมูล Audit Log และระบบแจ้งผลแล้ว';
   }
   const ss = SpreadsheetApp.create('E-Complaint Intake Registry - Confidential');
   const sh = ss.getSheets()[0];
   sh.setName('Cases'); sh.appendRow(INTAKE.HEADERS);
   sh.setFrozenRows(1);
+  ensureSubmissionColumn_(sh);
   ensureAuditSheet_(ss);
   ensureResponsesSheet_(ss);
   props.setProperty(INTAKE.SHEET_PROP, ss.getId());
@@ -66,6 +69,24 @@ function assertPrivateFolders_() {
     if(!isChild) throw Error('โครงสร้างโฟลเดอร์ร้องเรียนไม่ถูกต้อง');
   }
 }
+function ensureSubmissionColumn_(sh) {
+  if(!sh)throw Error('ไม่พบทะเบียน Cases');
+  if(sh.getRange(1,15).getValue() !== 'วันที่ยื่นสำเร็จ') {
+    if(sh.getRange(1,15).getValue()) throw Error('คอลัมน์ 15 ถูกใช้งานอยู่ ตรวจสอบก่อนย้ายข้อมูล');
+    sh.getRange(1,15).setValue('วันที่ยื่นสำเร็จ');
+  }
+}
+function caseDate_(date) {
+  return Utilities.formatDate(date,INTAKE.TZ,'yyyy-MM-dd');
+}
+/* Date hierarchy is created only after public-folder checks and inside the same lock as case creation. */
+function privateDatedFolder_(parent,date) {
+  const name=caseDate_(date);
+  const existing=parent.getFoldersByName(name);
+  const folder=existing.hasNext()?existing.next():parent.createFolder(name);
+  if(folder.getSharingAccess()!==DriveApp.Access.PRIVATE)throw Error('โฟลเดอร์วันที่มีการแชร์สาธารณะ');
+  return folder;
+}
 function sheet_() {
   const id=PropertiesService.getScriptProperties().getProperty(INTAKE.SHEET_PROP);
   if(!id) throw Error('Backend ยังไม่ได้ตั้งค่า กรุณาเรียก setupIntake() ก่อน');
@@ -89,7 +110,7 @@ function ensureAuditSheet_(ss) {
 function writeAudit_(action,caseId,actor,role,outcome) {
   const allowed=new Set(['CASE_DRAFT_CREATED','CASE_SUBMITTED','CITIZEN_STATUS_VIEW',
     'STAFF_CASE_LIST','STAFF_CASE_VIEW','STAFF_EVIDENCE_DOWNLOAD',
-    'STAFF_CASE_STATUS_UPDATE','CITIZEN_REPLY_VIEW']);
+    'STAFF_CASE_STATUS_UPDATE','CITIZEN_REPLY_VIEW','STAFF_DAILY_SUMMARY']);
   if(!allowed.has(action)) throw Error('Audit event ไม่ได้รับอนุญาต');
   const sh=ensureAuditSheet_(sheet_().getParent());
   sh.appendRow([new Date(),action,caseId||'',sheetText_(actor||''),role,outcome||'SUCCESS']);
@@ -175,10 +196,12 @@ function startComplaint(input) {
         return {caseId:data[0],status:data[10]};
       }
     }
-    const caseId='NPT-'+Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMdd')+
+    const now=new Date();
+    const caseId='NPT-'+Utilities.formatDate(now,INTAKE.TZ,'yyyyMMdd')+
       '-'+Utilities.getUuid().slice(0,8).toUpperCase();
     const parent=DriveApp.getFolderById(intent==='reward'?INTAKE.REWARD:INTAKE.NO_REWARD);
-    const folder=parent.createFolder(caseId);
+    const datedFolder=privateDatedFolder_(parent,now);
+    const folder=datedFolder.createFolder(caseId);
     // Personal data is written only after permissions have been verified.
     const payload={caseId,createdAt:new Date().toISOString(),intent,email,name,phone,
       subject,place,details,nationalId:intent==='reward'?nationalId:null,
@@ -251,7 +274,10 @@ function finishComplaint(input) {
     const files=JSON.parse(row[13]||'{}');
     if(row[2]==='reward' && (!files.identityCard || files.identityCard.length!==1))
       throw Error('กรุณาแนบสำเนาบัตรประชาชน 1 รูป');
+    const submittedAt=new Date();
+    ensureSubmissionColumn_(sh);
     sh.getRange(found.row,11).setValue('SUBMITTED');
+    sh.getRange(found.row,15).setValue(submittedAt);
     writeAudit_('CASE_SUBMITTED',id,email,'CITIZEN','SUCCESS');
     return {caseId:id,status:'SUBMITTED'};
   }finally{lock.releaseLock();}
@@ -352,4 +378,40 @@ function staffUpdateCase(input) {
     writeAudit_('STAFF_CASE_STATUS_UPDATE',caseId,actor,'STAFF','SUCCESS');
     return {caseId,status:next,updatedAt:now.toISOString()};
   }finally{lock.releaseLock();}
+}
+
+/**
+ * Daily counts of fully submitted complaint records only.
+ * One case counts once, even when it has several evidence files.
+ * No email, citizen name, identity number or evidence is returned.
+ * No financial amounts are stored or inferred from reward intent.
+ */
+function staffDailySummary(input) {
+  const actor=staffIdentity_(input&&input.idToken);
+  const date=cleaned_(input&&input.date,10)||caseDate_(new Date());
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+     caseDate_(new Date(date+'T12:00:00+07:00'))!==date)
+    throw Error('กรุณาระบุวันที่รูปแบบ YYYY-MM-DD');
+  const sh=sheet_();
+  ensureSubmissionColumn_(sh);
+  const last=sh.getLastRow();
+  const summary={date,total:0,reward:0,noReward:0};
+  if(last<2)return summary;
+  const values=sh.getRange(2,1,last-1,15).getValues();
+  const counted=new Set();
+  for(const row of values) {
+    const id=String(row[0]||'');
+    const intent=String(row[2]||'');
+    const state=String(row[10]||'');
+    const submitted=row[14];
+    if(!id||counted.has(id)||state==='DRAFT'||!submitted)continue;
+    if(!(submitted instanceof Date) || !Number.isFinite(submitted.getTime()))continue;
+    if(caseDate_(submitted)!==date)continue;
+    if(intent!=='reward'&&intent!=='no-reward')continue;
+    counted.add(id);
+    summary.total++;
+    if(intent==='reward')summary.reward++;else summary.noReward++;
+  }
+  writeAudit_('STAFF_DAILY_SUMMARY','',actor,'STAFF','SUCCESS');
+  return summary;
 }
