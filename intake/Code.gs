@@ -17,7 +17,8 @@ const REQUIRED_REWARD_DOCS = []; // The latest reward-intent form requires an id
 function doGet(e) {
   const intent = (e && e.parameter && e.parameter.intent) === 'reward' ? 'reward' : 'no-reward';
   const staff = e && e.parameter && e.parameter.view === 'staff';
-  const t = HtmlService.createTemplateFromFile(staff ? 'Staff' : intent === 'reward' ? 'Reward' : 'Intake');
+  const citizen = e && e.parameter && e.parameter.view === 'citizen';
+  const t = HtmlService.createTemplateFromFile(staff ? 'Staff' : citizen ? 'CitizenStatus' : intent === 'reward' ? 'Reward' : 'Intake');
   t.intent = intent;
   t.clientId = INTAKE.GOOGLE_CLIENT_ID;
   return t.evaluate().setTitle('แจ้งข้อร้องเรียน | สสจ.นครปฐม')
