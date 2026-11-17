@@ -8,6 +8,9 @@ const INTAKE = Object.freeze({
   ROOT: '12I80r9jyMUqTSe63VYQHGRc_ok6dH5tO',
   REWARD: '1t6GC0JI-_EidfYd_GjnjAzg8Y1IBNF0L',
   NO_REWARD: '1MpWPCtJa5yZmHlwK_n_AOmPpkPKLaERC',
+  // Replace with private folders owned by ossc73@gmail.com before production.
+  INSPECTION: 'SET_PRIVATE_INSPECTION_FOLDER_ID',
+  OSSC: 'SET_PRIVATE_OSSC_FOLDER_ID',
   GOOGLE_CLIENT_ID: 'SET_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com',
   SHEET_PROP: 'INTAKE_SPREADSHEET_ID',
   TZ: 'Asia/Bangkok',
@@ -17,10 +20,11 @@ const INTAKE = Object.freeze({
 const REQUIRED_REWARD_DOCS = []; // The latest reward-intent form requires an identity-card image instead of four PDFs.
 
 function doGet(e) {
-  const intent = (e && e.parameter && e.parameter.intent) === 'reward' ? 'reward' : 'no-reward';
+  const requested = e && e.parameter && e.parameter.intent;
+  const intent = ['reward','no-reward','inspection','ossc'].includes(requested) ? requested : 'no-reward';
   const staff = e && e.parameter && e.parameter.view === 'staff';
   const citizen = e && e.parameter && e.parameter.view === 'citizen';
-  const t = HtmlService.createTemplateFromFile(staff ? 'Staff' : citizen ? 'CitizenStatus' : intent === 'reward' ? 'Reward' : 'Intake');
+  const t = HtmlService.createTemplateFromFile(staff ? 'Staff' : citizen ? 'CitizenStatus' : intent === 'reward' ? 'Reward' : intent === 'inspection' ? 'Inspection' : intent === 'ossc' ? 'Ossc' : 'Intake');
   t.intent = intent;
   t.clientId = INTAKE.GOOGLE_CLIENT_ID;
   return t.evaluate().setTitle('แจ้งข้อร้องเรียน | สสจ.นครปฐม')
@@ -52,7 +56,8 @@ function verifyProductionOwnership_() {
   const effective=(Session.getEffectiveUser().getEmail()||'').toLowerCase();
   if(effective!==INTAKE.REQUIRED_OWNER_EMAIL)
     throw Error('ไม่อนุญาตให้รับเรื่อง: Apps Script ต้องดำเนินการด้วยบัญชีกลางของหน่วยงาน');
-  for (const id of [INTAKE.ROOT,INTAKE.REWARD,INTAKE.NO_REWARD]) {
+  for (const id of [INTAKE.ROOT,INTAKE.REWARD,INTAKE.NO_REWARD,INTAKE.INSPECTION,INTAKE.OSSC]) {
+    if(id.startsWith('SET_'))throw Error('ยังไม่ได้กำหนดโฟลเดอร์รับเรื่องทุกประเภท');
     const folder=DriveApp.getFolderById(id);
     const owner=folder.getOwner();
     if(!owner||owner.getEmail().toLowerCase()!==INTAKE.REQUIRED_OWNER_EMAIL)
@@ -84,8 +89,8 @@ function assertPrivateFolders_() {
     const parents=folder.getParents();
     while(parents.hasNext()) checkAncestors(parents.next(),depth+1);
   }
-  for (const id of [INTAKE.ROOT, INTAKE.REWARD, INTAKE.NO_REWARD]) checkAncestors(DriveApp.getFolderById(id),0);
-  for (const id of [INTAKE.REWARD, INTAKE.NO_REWARD]) {
+  for (const id of [INTAKE.ROOT, INTAKE.REWARD, INTAKE.NO_REWARD,INTAKE.INSPECTION,INTAKE.OSSC]) checkAncestors(DriveApp.getFolderById(id),0);
+  for (const id of [INTAKE.REWARD, INTAKE.NO_REWARD,INTAKE.INSPECTION,INTAKE.OSSC]) {
     const parents=DriveApp.getFolderById(id).getParents();
     let isChild=false;
     while(parents.hasNext()) if(parents.next().getId()===root.getId()) isChild=true;
@@ -174,7 +179,7 @@ function identity_(token) {
 function cleaned_(value,max) { return String(value||'').trim().slice(0,max); }
 function sheetText_(value) { const s=String(value||''); return /^[=+\-@]/.test(s)?"'"+s:s; }
 function exactIntent_(intent) {
-  if(!['reward','no-reward'].includes(intent)) throw Error('ประเภทการร้องเรียนไม่ถูกต้อง');
+  if(!['reward','no-reward','inspection','ossc'].includes(intent)) throw Error('ประเภทการร้องเรียนไม่ถูกต้อง');
   return intent;
 }
 function findCase_(sh,id) {
@@ -222,7 +227,8 @@ function startComplaint(input) {
     const now=new Date();
     const caseId='NPT-'+Utilities.formatDate(now,INTAKE.TZ,'yyyyMMdd')+
       '-'+Utilities.getUuid().slice(0,8).toUpperCase();
-    const parent=DriveApp.getFolderById(intent==='reward'?INTAKE.REWARD:INTAKE.NO_REWARD);
+    const intentFolder={reward:INTAKE.REWARD,'no-reward':INTAKE.NO_REWARD,inspection:INTAKE.INSPECTION,ossc:INTAKE.OSSC};
+    const parent=DriveApp.getFolderById(intentFolder[intent]);
     const datedFolder=privateDatedFolder_(parent,now);
     const folder=datedFolder.createFolder(caseId);
     // Personal data is written only after permissions have been verified.
@@ -270,7 +276,8 @@ function uploadEvidence(input) {
     assertPrivateFolders_();
     const sh=sheet_(),found=findCase_(sh,id),row=found.data;
     if(row[3]!==email||row[10]!=='DRAFT') throw Error('ไม่สามารถเพิ่มหลักฐานให้เรื่องนี้ได้');
-    if(kind!=='image'&&kind!=='video'&&row[2]!=='reward') throw Error('ไม่มีสิทธิ์แนบเอกสารสินบนนำจับ');
+    if(kind==='identityCard' && row[2]!=='reward') throw Error('ไม่อนุญาตให้แนบสำเนาบัตรประชาชนกับประเภทนี้');
+    if(!['image','video','evidence','identityCard'].includes(kind)) throw Error('ประเภทไฟล์ไม่รองรับ');
     const uploads=JSON.parse(row[13]||'{}'),arr=uploads[kind]||[];
     if(arr.length>=(kind==='image'||kind==='evidence'?5:1)) throw Error('จำนวนไฟล์ชนิดนี้ครบแล้ว');
     const extByMime={'image/jpeg':'jpg','image/png':'png','image/webp':'webp',
@@ -418,7 +425,7 @@ function staffDailySummary(input) {
   const sh=sheet_();
   ensureSubmissionColumn_(sh);
   const last=sh.getLastRow();
-  const summary={date,total:0,reward:0,noReward:0};
+  const summary={date,total:0,reward:0,noReward:0,inspection:0,ossc:0};
   if(last<2)return summary;
   const values=sh.getRange(2,1,last-1,15).getValues();
   const counted=new Set();
@@ -430,10 +437,13 @@ function staffDailySummary(input) {
     if(!id||counted.has(id)||state==='DRAFT'||!submitted)continue;
     if(!(submitted instanceof Date) || !Number.isFinite(submitted.getTime()))continue;
     if(caseDate_(submitted)!==date)continue;
-    if(intent!=='reward'&&intent!=='no-reward')continue;
+    if(!['reward','no-reward','inspection','ossc'].includes(intent))continue;
     counted.add(id);
     summary.total++;
-    if(intent==='reward')summary.reward++;else summary.noReward++;
+    if(intent==='reward')summary.reward++;
+    else if(intent==='no-reward')summary.noReward++;
+    else if(intent==='inspection')summary.inspection++;
+    else summary.ossc++;
   }
   writeAudit_('STAFF_DAILY_SUMMARY','',actor,'STAFF','SUCCESS');
   return summary;
