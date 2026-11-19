@@ -60,7 +60,6 @@ td{border-top:1px solid #e8f0ee;padding:13px;font-size:13px;line-height:1.6}.emp
   <button type="submit" class="primary full" disabled>เข้าสู่ระบบ</button>
  </form>
  <p class="subtle" style="text-align:center">ระบบ Username/Password ยังอยู่ระหว่างพัฒนาและไม่เปิดให้ทดลองด้วยข้อมูลจริง</p>
- <button id="previewButton" type="button" class="secondary full">ดูตัวอย่าง Dashboard</button>
  <footer>สำหรับเจ้าหน้าที่ที่ได้รับสิทธิ์เท่านั้น<br>สำนักงานสาธารณสุขจังหวัดนครปฐม</footer>
 </section>
 <section class="dashboard" id="dashboardView" aria-label="ตัวอย่างหน้าระบบเจ้าหน้าที่" hidden>
@@ -143,17 +142,13 @@ td{border-top:1px solid #e8f0ee;padding:13px;font-size:13px;line-height:1.6}.emp
   setView('overview');
  }
  document.getElementById('loginForm').addEventListener('submit',e=>e.preventDefault());
- document.getElementById('previewButton').addEventListener('click',()=>{
-  login.hidden=true;dash.hidden=false;setRole('staff');dash.scrollIntoView({behavior:'smooth'});
- });
  document.getElementById('backToLogin').addEventListener('click',()=>{
   dash.hidden=true;login.hidden=false;login.scrollIntoView({behavior:'smooth'});
  });
  document.querySelectorAll('[data-view]').forEach(e=>e.addEventListener('click',()=>setView(e.dataset.view)));
  // Demonstration-only Admin view may be opened by direct URL query for layout review.
  // This does NOT grant permissions and MUST NEVER be used as authentication.
- const params=new URLSearchParams(location.search);
- if(params.get('preview')==='admin'){login.hidden=true;dash.hidden=false;setRole('admin');}
+
 })();
 </script>
 </body></html>
