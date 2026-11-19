@@ -39,6 +39,7 @@ function setupIntake() {
     const existing=SpreadsheetApp.openById(props.getProperty(INTAKE.SHEET_PROP));
     ensureAuditSheet_(existing);
     ensureResponsesSheet_(existing);
+    ensureResponseFilesSheet_(existing);
     ensureSubmissionColumn_(existing.getSheetByName('Cases'));
     return 'ตั้งค่าฐานข้อมูล Audit Log และระบบแจ้งผลแล้ว';
   }
@@ -49,6 +50,7 @@ function setupIntake() {
   ensureSubmissionColumn_(sh);
   ensureAuditSheet_(ss);
   ensureResponsesSheet_(ss);
+  ensureResponseFilesSheet_(ss);
   props.setProperty(INTAKE.SHEET_PROP, ss.getId());
   return ss.getUrl();
 }
@@ -138,7 +140,8 @@ function ensureAuditSheet_(ss) {
 function writeAudit_(action,caseId,actor,role,outcome) {
   const allowed=new Set(['CASE_DRAFT_CREATED','CASE_SUBMITTED','CITIZEN_STATUS_VIEW',
     'STAFF_CASE_LIST','STAFF_CASE_VIEW','STAFF_EVIDENCE_DOWNLOAD',
-    'STAFF_CASE_STATUS_UPDATE','CITIZEN_REPLY_VIEW','STAFF_DAILY_SUMMARY']);
+    'STAFF_CASE_STATUS_UPDATE','CITIZEN_REPLY_VIEW','STAFF_DAILY_SUMMARY',
+    'STAFF_RESPONSE_PDF_UPLOAD','CITIZEN_RESPONSE_PDF_DOWNLOAD']);
   if(!allowed.has(action)) throw Error('Audit event ไม่ได้รับอนุญาต');
   const sh=ensureAuditSheet_(sheet_().getParent());
   sh.appendRow([new Date(),action,caseId||'',sheetText_(actor||''),role,outcome||'SUCCESS']);
@@ -152,6 +155,91 @@ function ensureResponsesSheet_(ss) {
   }
   return sh;
 }
+
+/**
+ * PDF attachments are kept in the complaint's original private Drive folder.
+ * The metadata sheet is separate from citizen evidence and never exposes Drive URLs.
+ */
+function ensureResponseFilesSheet_(ss) {
+  let sh=ss.getSheetByName('CaseResponseFiles');
+  if(!sh){
+    sh=ss.insertSheet('CaseResponseFiles');
+    sh.appendRow(['เลขรับเรื่อง','รหัสไฟล์','ชื่อไฟล์','ขนาดไบต์','อัปโหลดเมื่อ','เจ้าหน้าที่ผู้บันทึก']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function responseFilesForCase_(sh,caseId) {
+  const last=sh.getLastRow();
+  if(last<2)return [];
+  return sh.getRange(2,1,last-1,6).getValues().filter(r=>String(r[0])===caseId)
+    .map(r=>({fileId:String(r[1]),name:String(r[2]),size:Number(r[3]),
+      uploadedAt:r[4] instanceof Date?r[4].toISOString():String(r[4])}));
+}
+function staffUploadResponsePdf(input) {
+  const actor=staffIdentity_(input&&input.idToken);
+  const caseId=cleaned_(input&&input.caseId,50);
+  if(!/^NPT-[0-9]{8}-[A-F0-9]{8}$/.test(caseId))throw Error('เลขรับเรื่องไม่ถูกต้อง');
+  const base64=String(input.base64||'');
+  const limit=10*1024*1024;
+  if(!base64||base64.length>Math.ceil(limit*4/3)+16||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))
+    throw Error('กรุณาเลือก PDF ขนาดไม่เกิน 10 MB');
+  const bytes=Utilities.base64Decode(base64);
+  if(bytes.length<5||bytes.length>limit||bytes.slice(0,5).join(',')!=='37,80,68,70,45')
+    throw Error('ไฟล์ต้องเป็น PDF ที่ถูกต้องและไม่เกิน 10 MB');
+  if(cleaned_(input.mime,100)!=='application/pdf')throw Error('ชนิดไฟล์ต้องเป็น PDF');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try {
+    assertPrivateFolders_();
+    const sh=sheet_(),found=findCase_(sh,caseId),row=found.data;
+    if(row[10]==='DRAFT')throw Error('ยังไม่สามารถส่งเอกสารสำหรับเรื่องที่เป็นร่าง');
+    const filesSheet=ensureResponseFilesSheet_(sh.getParent());
+    const existing=responseFilesForCase_(filesSheet,caseId);
+    if(existing.length>=20)throw Error('ครบจำนวน PDF ติดตามเรื่องสูงสุด 20 ไฟล์แล้ว');
+    const folder=DriveApp.getFolderById(String(row[11]));
+    if(folder.getSharingAccess()!==DriveApp.Access.PRIVATE)
+      throw Error('โฟลเดอร์รายคำร้องไม่ได้ตั้งเป็นส่วนตัว');
+    const original=cleaned_(input.name,120).replace(/[\\/<>:"|?*\x00-\x1f]/g,'_');
+    const base=original.replace(/\.pdf$/i,'').trim()||'ผลการดำเนินงาน';
+    const filename='ติดตามเรื่อง-'+Utilities.formatDate(new Date(),INTAKE.TZ,'yyyyMMdd-HHmmss')+
+      '-'+Utilities.getUuid().slice(0,8)+'-'+base+'.pdf';
+    const blob=Utilities.newBlob(bytes,'application/pdf',filename);
+    const file=folder.createFile(blob);
+    try{
+      filesSheet.appendRow([caseId,file.getId(),sheetText_(filename),bytes.length,new Date(),actor]);
+    }catch(error){
+      file.setTrashed(true);
+      throw error;
+    }
+    writeAudit_('STAFF_RESPONSE_PDF_UPLOAD',caseId,actor,'STAFF','SUCCESS');
+    return {caseId,fileId:file.getId(),name:filename};
+  } finally {lock.releaseLock();}
+}
+function citizenResponsePdf(input) {
+  const email=identity_(input&&input.idToken);
+  const caseId=cleaned_(input&&input.caseId,50);
+  const found=findCase_(sheet_(),caseId);
+  if(String(found.data[3]).toLowerCase()!==email||found.data[10]==='DRAFT')
+    throw Error('ไม่มีสิทธิ์เปิดเอกสารของเรื่องนี้');
+  assertPrivateFolders_();
+  const fileId=cleaned_(input&&input.fileId,150);
+  const sh=ensureResponseFilesSheet_(sheet_().getParent());
+  const listed=responseFilesForCase_(sh,caseId).find(f=>f.fileId===fileId);
+  if(!listed)throw Error('ไม่พบเอกสารที่เปิดเผยให้ผู้ร้องเรียนรายนี้');
+  const folder=DriveApp.getFolderById(String(found.data[11]));
+  if(folder.getSharingAccess()!==DriveApp.Access.PRIVATE)
+    throw Error('โฟลเดอร์รายคำร้องไม่ได้ตั้งเป็นส่วนตัว');
+  const file=DriveApp.getFileById(fileId);
+  const parents=file.getParents();
+  let belongs=false;
+  while(parents.hasNext())if(parents.next().getId()===folder.getId())belongs=true;
+  if(!belongs||file.getMimeType()!=='application/pdf')throw Error('ไฟล์ไม่อยู่ในโฟลเดอร์คำร้อง');
+  const bytes=file.getBlob().getBytes();
+  if(bytes.length>10*1024*1024)throw Error('ไฟล์ใหญ่เกินขนาดดาวน์โหลด');
+  writeAudit_('CITIZEN_RESPONSE_PDF_DOWNLOAD',caseId,email,'CITIZEN','SUCCESS');
+  return {name:listed.name,mime:'application/pdf',base64:Utilities.base64Encode(bytes)};
+}
+
 function findResponseRow_(sh,caseId) {
   const last=sh.getLastRow();
   if(last<2)return 0;
@@ -323,7 +411,8 @@ function myComplaintStatus(input) {
   const response=index?safeResponse_(replies.getRange(index,1,1,5).getValues()[0]):null;
   writeAudit_('CITIZEN_STATUS_VIEW',found.data[0],email,'CITIZEN','SUCCESS');
   if(response)writeAudit_('CITIZEN_REPLY_VIEW',found.data[0],email,'CITIZEN','SUCCESS');
-  return {caseId:found.data[0],status:found.data[10],
+  const responseFiles=responseFilesForCase_(ensureResponseFilesSheet_(sheet_().getParent()),found.data[0]);
+  return {caseId:found.data[0],status:found.data[10],responseFiles,
     submittedAt:found.data[1] instanceof Date?found.data[1].toISOString():String(found.data[1]),
     response};
 }
