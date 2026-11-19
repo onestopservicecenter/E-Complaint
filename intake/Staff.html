@@ -50,6 +50,7 @@ table{border-collapse:collapse;width:100%}th,td{text-align:left;border-bottom:1p
 <select id="caseStatus"><option value="RECEIVED">รับเรื่องแล้ว</option><option value="IN_REVIEW">อยู่ระหว่างตรวจสอบ</option><option value="NEED_INFORMATION">ขอข้อมูลเพิ่มเติม</option><option value="COMPLETED">ดำเนินการแล้วเสร็จ</option><option value="CLOSED">ยุติเรื่อง</option></select>
 <label for="responseMessage">ข้อความแจ้งผู้ร้อง</label><textarea id="responseMessage" maxlength="2000" required minlength="5" placeholder="แจ้งขั้นตอนหรือผลการดำเนินงาน โดยไม่ใส่ข้อมูลอ่อนไหว"></textarea>
 <button id="saveResponse" type="submit">บันทึกสถานะและข้อความแจ้งผล</button>
+</form><form id="pdfForm"><label for="responsePdf">แนบ PDF ความคืบหน้า (เก็บในโฟลเดอร์เดียวกับคำร้องเดิม)</label><input type="file" id="responsePdf" accept="application/pdf,.pdf" required><p class="hint">เฉพาะ PDF ไม่เกิน 10 MB ต่อไฟล์ ผู้ร้องเรียนเจ้าของเรื่องเท่านั้นที่จะเปิดผ่านหน้าติดตามได้</p><button type="submit" id="uploadPdf">อัปโหลด PDF ให้ผู้ร้องเรียน</button>
 </form></div></section>
 </main><script>
 const CLIENT_ID=<?= JSON.stringify(clientId) ?>;
@@ -91,7 +92,7 @@ async function detail(caseId){msg('กำลังโหลดข้อมูล
  const wrap=document.createElement('div');wrap.className='file-row';addText('span',kind+' — '+file.name,wrap);
  const btn=addText('button','เปิดหลักฐาน',wrap);btn.onclick=()=>openEvidence(caseId,file.fileId,btn);files.appendChild(wrap);
  }));
- el('responseMessage').value='';
+ el('responseMessage').value='';el('responsePdf').value='';
  el('caseStatus').value=['RECEIVED','IN_REVIEW','NEED_INFORMATION','COMPLETED','CLOSED'].includes(data.status)?data.status:'RECEIVED';
  el('detail').hidden=false;el('detail').scrollIntoView({block:'start'});msg('แสดงข้อมูล '+caseId);
  }catch(e){msg(e.message||String(e),true);}
@@ -131,6 +132,30 @@ el('responseForm').addEventListener('submit',async ev=>{
    msg('บันทึกสถานะ '+saved.caseId+' สำเร็จ (ยังไม่มีการส่งอีเมล)');
    await detail(currentCaseId);
  }catch(e){msg(e.message||String(e),true);}
+ finally{button.disabled=false;}
+});
+function readPdfBase64(file){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+  reader.onerror=()=>reject(Error('อ่านไฟล์ไม่ได้'));
+  reader.readAsDataURL(file);
+ });
+}
+el('pdfForm').addEventListener('submit',async ev=>{
+ ev.preventDefault();
+ if(!currentCaseId||!token){msg('กรุณาเข้าสู่ระบบและเลือกคำร้อง',true);return;}
+ const file=el('responsePdf').files[0];
+ if(!file||!(/\\.pdf$/i.test(file.name))||file.type!=='application/pdf'||file.size>10*1024*1024||file.size<5){
+  msg('กรุณาเลือกไฟล์ PDF ไม่เกิน 10 MB',true);return;
+ }
+ const button=el('uploadPdf');button.disabled=true;
+ try{
+  const base64=await readPdfBase64(file);
+  const result=await api('staffUploadResponsePdf',{idToken:token,caseId:currentCaseId,name:file.name,mime:'application/pdf',base64});
+  msg('อัปโหลด '+result.name+' สำเร็จในโฟลเดอร์คำร้อง '+result.caseId);
+  el('responsePdf').value='';
+ }catch(e){msg('อัปโหลด PDF ไม่สำเร็จ: '+(e.message||String(e)),true);}
  finally{button.disabled=false;}
 });
 el('refresh').onclick=load;
