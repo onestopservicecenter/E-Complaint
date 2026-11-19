@@ -19,11 +19,11 @@ button:disabled{opacity:.6}#result{border:1px solid #d9e6f2;border-radius:10px;p
 <input id="caseId" required maxlength="50" pattern="NPT-[0-9]{8}-[A-F0-9]{8}" placeholder="NPT-YYYYMMDD-XXXXXXXX" autocomplete="off">
 <button id="search" type="submit">ตรวจสอบสถานะ</button></form>
 <div id="result" role="status" aria-live="polite" hidden>
-<h2 id="statusTitle"></h2><p id="message"></p><p class="notice" id="updated"></p></div>
+<h2 id="statusTitle"></h2><p id="message"></p><p class="notice" id="updated"></p><div id="responseDocuments"></div></div>
 </main><script>
 const CLIENT_ID=<?= JSON.stringify(clientId) ?>;
 let token='';const el=id=>document.getElementById(id);
-function show(status,message,updated=''){el('result').hidden=false;el('statusTitle').textContent=status;el('message').textContent=message;el('updated').textContent=updated;}
+function show(status,message,updated=''){el('result').hidden=false;el('statusTitle').textContent=status;el('message').textContent=message;el('updated').textContent=updated;el('responseDocuments').replaceChildren();}
 window.addEventListener('load',()=>{
  if(CLIENT_ID.startsWith('SET_')){show('ระบบยังไม่เปิดให้บริการ','ยังไม่ได้ตั้งค่าการเข้าสู่ระบบ Google');return;}
  if(!window.google?.accounts?.id){show('เกิดข้อผิดพลาด','ไม่สามารถโหลด Google Login');return;}
@@ -45,6 +45,28 @@ el('lookup').addEventListener('submit',async ev=>{
  show('เลขรับเรื่อง '+item.caseId+' — '+(labels[item.status]||item.status),
   item.response?.message||'ยังไม่มีข้อความแจ้งผลจากเจ้าหน้าที่',
   item.response?.updatedAt?'ปรับปรุงล่าสุด: '+new Date(item.response.updatedAt).toLocaleString('th-TH'):'');
+ const docs=el('responseDocuments');
+ if(Array.isArray(item.responseFiles)&&item.responseFiles.length){
+  const title=document.createElement('h2');title.textContent='เอกสาร PDF ความคืบหน้า';docs.appendChild(title);
+  item.responseFiles.forEach(file=>{
+   const btn=document.createElement('button');btn.type='button';
+   btn.textContent='ดาวน์โหลด PDF: '+file.name;
+   btn.style.display='block';btn.style.marginTop='9px';
+   btn.addEventListener('click',async()=>{
+    btn.disabled=true;
+    try{
+     const r=await new Promise((ok,no)=>google.script.run.withSuccessHandler(ok).withFailureHandler(no)
+       .citizenResponsePdf({idToken:token,caseId:item.caseId,fileId:file.fileId}));
+     const bytes=Uint8Array.from(atob(r.base64),c=>c.charCodeAt(0));
+     const url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
+     const a=document.createElement('a');a.href=url;a.download=r.name;document.body.appendChild(a);a.click();a.remove();
+     setTimeout(()=>URL.revokeObjectURL(url),60000);
+    }catch(error){el('message').textContent='ดาวน์โหลดไม่ได้: '+(error.message||String(error));}
+    finally{btn.disabled=false;}
+   });
+   docs.appendChild(btn);
+  });
+ }
  }catch(err){show('ไม่สามารถแสดงข้อมูลได้',err.message||String(err));}
  finally{el('search').disabled=false;}
 });
