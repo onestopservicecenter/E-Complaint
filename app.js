@@ -9,43 +9,52 @@ window.addEventListener('message',e=>{const d=e.data;if(!d||d.channel!==channel|
 async function api(action,data={}){if(!endpoint())throw Error('ระบบอยู่ระหว่างการตั้งค่า กรุณาลองใหม่ภายหลัง');if(!bridgeReady)throw Error('กำลังเชื่อมต่อบริการ กรุณารอสักครู่');return new Promise((resolve,reject)=>{const id=uid(),timer=setTimeout(()=>{pending.delete(id);reject(Error('หมดเวลารอ กรุณาตรวจสอบรายการก่อนส่งซ้ำ'))},120000);pending.set(id,{resolve,reject,timer});bridgeWindow.postMessage({type:'NPT2_REQUEST',channel,id,action,data,session},bridgeOrigin)})}
 function renderIdentity(){const signed=!!user;$('#identity').textContent=signed?user.email:'ยังไม่ได้เข้าสู่ระบบ';$('#login').classList.toggle('hidden',signed||cfg.googleLoginMode==='id-token');document.querySelectorAll('.google-id-login').forEach(e=>e.classList.toggle('hidden',signed));$('#logout').classList.toggle('hidden',!signed);document.querySelectorAll('.login-gate').forEach(e=>e.classList.toggle('hidden',signed));$('#complaintForm')?.classList.toggle('hidden',!signed);$('#refreshCases')?.classList.toggle('hidden',!signed);$('.tracking-results')?.classList.toggle('hidden',!signed);document.dispatchEvent(new Event('identity-changed'))}
 async function prepareLogin(){if(loginPreparation)return loginPreparation;loginPreparation=(async()=>{if(!window.google?.accounts?.oauth2)throw Error('บริการเข้าสู่ระบบยังโหลดไม่เสร็จ กรุณาลองอีกครั้ง');if(!cfg.googleClientId)throw Error('ระบบเข้าสู่ระบบอยู่ระหว่างการตั้งค่า');loginState=await api('beginLogin',{browserKey});loginClient=google.accounts.oauth2.initCodeClient({client_id:cfg.googleClientId,scope:'openid email profile',ux_mode:'popup',select_account:true,state:loginState.state,callback:async r=>{try{if(r.error||!r.code)throw Error('ไม่สามารถเข้าสู่ระบบได้');const answer=await api('completeLogin',{code:r.code,state:loginState.state,browserKey});session=answer.session;user=answer.user;renderIdentity();notice('เข้าสู่ระบบแล้ว');if($('#myCases'))await loadMyCases()}catch(e){notice(e.message)}finally{loginClient=null;loginPreparation=null;loginState=null;prepareLogin().catch(()=>{})}},error_callback:()=>notice('ไม่สามารถเปิดหน้าต่างเข้าสู่ระบบได้ กรุณาอนุญาตป๊อปอัปแล้วลองใหม่')});return loginClient})().catch(e=>{loginPreparation=null;throw e});return loginPreparation}
-// Google Sign-In ID token mode. The server must implement completeIdLogin
-// with signature/issuer/audience/expiry verification before this branch is deployed.
+// Google Sign-In ID token mode for the restricted testing phase.
+// A one-time server nonce must be present in the ID token and in the session request.
 let idTokenLoginInitialized=false;
-function setupIdTokenLogin(){
+let idTokenLoginPreparation=null;
+async function setupIdTokenLogin(){
  if(cfg.googleLoginMode!=='id-token'||idTokenLoginInitialized)return;
- if(!cfg.googleClientId||!window.google?.accounts?.id){notice('ระบบ Google Login ยังไม่พร้อมใช้งาน');return}
- idTokenLoginInitialized=true;
- google.accounts.id.initialize({
-  client_id:cfg.googleClientId,
-  auto_select:false,
-  callback:async response=>{
-   try{
-    if(!response?.credential)throw Error('ไม่ได้รับข้อมูลยืนยันตัวตนจาก Google');
-    // Never decode or trust the credential in the browser to assign any role.
-    // The Apps Script backend must verify it and issue its own session.
-    const answer=await api('completeIdLogin',{credential:response.credential});
-    if(!answer?.session||!answer?.user)throw Error('Backend ไม่ได้ส่งข้อมูลเข้าสู่ระบบที่ถูกต้อง');
-    session=answer.session;user=answer.user;renderIdentity();notice('เข้าสู่ระบบแล้ว');
-    if($('#myCases'))await loadMyCases();
-   }catch(e){notice(e.message||'ไม่สามารถเข้าสู่ระบบได้')}
-  }
- });
- document.querySelectorAll('#login,.login-button').forEach(button=>{
-  if(button.dataset.googleIdReady)return;
-  button.dataset.googleIdReady='1';
-  const wrapper=make('span');wrapper.className='google-id-login';
-  button.insertAdjacentElement('afterend',wrapper);
-  google.accounts.id.renderButton(wrapper,{theme:'outline',size:'large',text:'signin_with',locale:'th'});
-  button.classList.add('hidden');
- });
- renderIdentity();
+ if(idTokenLoginPreparation)return idTokenLoginPreparation;
+ if(!cfg.googleClientId||!window.google?.accounts?.id||!bridgeReady)return;
+ idTokenLoginPreparation=(async()=>{
+  const request=await api('beginLogin',{browserKey});
+  if(!request?.state)throw Error('Backend ไม่ได้ส่งข้อมูลยืนยันคำขอ');
+  const idLoginState=request.state;
+  google.accounts.id.initialize({
+   client_id:cfg.googleClientId,
+   nonce:idLoginState,
+   auto_select:false,
+   callback:async response=>{
+    try{
+     if(!response?.credential)throw Error('ไม่ได้รับข้อมูลยืนยันตัวตนจาก Google');
+     // The server validates Google identity and derives all permissions itself.
+     const answer=await api('completeIdLogin',{credential:response.credential,state:idLoginState,browserKey});
+     if(!answer?.session||!answer?.user)throw Error('Backend ไม่ได้ส่งข้อมูลเข้าสู่ระบบที่ถูกต้อง');
+     session=answer.session;user=answer.user;renderIdentity();notice('เข้าสู่ระบบแล้ว');
+     if($('#myCases'))await loadMyCases();
+    }catch(e){notice((e.message||'ไม่สามารถเข้าสู่ระบบได้')+' หากคำขอหมดอายุให้โหลดหน้าใหม่')}
+   }
+  });
+  document.querySelectorAll('#login,.login-button').forEach(button=>{
+   if(button.dataset.googleIdReady)return;
+   button.dataset.googleIdReady='1';
+   const wrapper=make('span');wrapper.className='google-id-login';
+   button.insertAdjacentElement('afterend',wrapper);
+   google.accounts.id.renderButton(wrapper,{theme:'outline',size:'large',text:'signin_with',locale:'th'});
+   button.classList.add('hidden');
+  });
+  idTokenLoginInitialized=true;
+  renderIdentity();
+ })().catch(e=>{notice(e.message||'ไม่สามารถเตรียม Google Login ได้');throw e}).finally(()=>{idTokenLoginPreparation=null});
+ return idTokenLoginPreparation;
 }
-window.addEventListener('load',setupIdTokenLogin);
+window.addEventListener('load',()=>setupIdTokenLogin().catch(()=>{}));
+document.addEventListener('service-ready',()=>setupIdTokenLogin().catch(()=>{}));
 function login(){
  if(cfg.googleLoginMode==='id-token'){
-  setupIdTokenLogin();
-  if(!idTokenLoginInitialized)notice('รอโหลดบริการ Google Login แล้วลองอีกครั้ง');
+  setupIdTokenLogin().catch(()=>{});
+  if(!idTokenLoginInitialized)notice('กำลังเชื่อมต่อ Google Login กรุณารอสักครู่');
   return;
  }
  if(loginClient){loginClient.requestCode();return}
