@@ -7,9 +7,50 @@ function notice(s){$('#toast').textContent=s;$('#toast').classList.add('shown');
 function endpoint(){try{const u=new URL(cfg.webAppUrl);return u.protocol==='https:'&&u.hostname==='script.google.com'&&/^\/macros\/s\/[^/]+\/exec$/.test(u.pathname)?u:null}catch{return null}}
 window.addEventListener('message',e=>{const d=e.data;if(!d||d.channel!==channel||!/^https:\/\/[a-z0-9.-]*googleusercontent\.com$/.test(e.origin))return;if(d.type==='NPT2_READY'&&!bridgeReady){bridgeWindow=e.source;bridgeOrigin=e.origin;bridgeReady=true;document.dispatchEvent(new Event('service-ready'));return}if(e.source!==bridgeWindow||e.origin!==bridgeOrigin||d.type!=='NPT2_RESPONSE')return;const p=pending.get(d.id);if(p){clearTimeout(p.timer);pending.delete(d.id);d.ok?p.resolve(d.data):p.reject(Error(d.error||'ระบบไม่พร้อมใช้งาน'));if(!d.ok&&String(d.error).includes('หมดเวลาเข้าสู่ระบบ')){session='';user=null;renderIdentity()}}});
 async function api(action,data={}){if(!endpoint())throw Error('ระบบอยู่ระหว่างการตั้งค่า กรุณาลองใหม่ภายหลัง');if(!bridgeReady)throw Error('กำลังเชื่อมต่อบริการ กรุณารอสักครู่');return new Promise((resolve,reject)=>{const id=uid(),timer=setTimeout(()=>{pending.delete(id);reject(Error('หมดเวลารอ กรุณาตรวจสอบรายการก่อนส่งซ้ำ'))},120000);pending.set(id,{resolve,reject,timer});bridgeWindow.postMessage({type:'NPT2_REQUEST',channel,id,action,data,session},bridgeOrigin)})}
-function renderIdentity(){const signed=!!user;$('#identity').textContent=signed?user.email:'ยังไม่ได้เข้าสู่ระบบ';$('#login').classList.toggle('hidden',signed);$('#logout').classList.toggle('hidden',!signed);document.querySelectorAll('.login-gate').forEach(e=>e.classList.toggle('hidden',signed));$('#complaintForm')?.classList.toggle('hidden',!signed);$('#refreshCases')?.classList.toggle('hidden',!signed);$('.tracking-results')?.classList.toggle('hidden',!signed);document.dispatchEvent(new Event('identity-changed'))}
+function renderIdentity(){const signed=!!user;$('#identity').textContent=signed?user.email:'ยังไม่ได้เข้าสู่ระบบ';$('#login').classList.toggle('hidden',signed||cfg.googleLoginMode==='id-token');document.querySelectorAll('.google-id-login').forEach(e=>e.classList.toggle('hidden',signed));$('#logout').classList.toggle('hidden',!signed);document.querySelectorAll('.login-gate').forEach(e=>e.classList.toggle('hidden',signed));$('#complaintForm')?.classList.toggle('hidden',!signed);$('#refreshCases')?.classList.toggle('hidden',!signed);$('.tracking-results')?.classList.toggle('hidden',!signed);document.dispatchEvent(new Event('identity-changed'))}
 async function prepareLogin(){if(loginPreparation)return loginPreparation;loginPreparation=(async()=>{if(!window.google?.accounts?.oauth2)throw Error('บริการเข้าสู่ระบบยังโหลดไม่เสร็จ กรุณาลองอีกครั้ง');if(!cfg.googleClientId)throw Error('ระบบเข้าสู่ระบบอยู่ระหว่างการตั้งค่า');loginState=await api('beginLogin',{browserKey});loginClient=google.accounts.oauth2.initCodeClient({client_id:cfg.googleClientId,scope:'openid email profile',ux_mode:'popup',select_account:true,state:loginState.state,callback:async r=>{try{if(r.error||!r.code)throw Error('ไม่สามารถเข้าสู่ระบบได้');const answer=await api('completeLogin',{code:r.code,state:loginState.state,browserKey});session=answer.session;user=answer.user;renderIdentity();notice('เข้าสู่ระบบแล้ว');if($('#myCases'))await loadMyCases()}catch(e){notice(e.message)}finally{loginClient=null;loginPreparation=null;loginState=null;prepareLogin().catch(()=>{})}},error_callback:()=>notice('ไม่สามารถเปิดหน้าต่างเข้าสู่ระบบได้ กรุณาอนุญาตป๊อปอัปแล้วลองใหม่')});return loginClient})().catch(e=>{loginPreparation=null;throw e});return loginPreparation}
-function login(){if(loginClient){loginClient.requestCode();return}prepareLogin().then(()=>notice('พร้อมเข้าสู่ระบบแล้ว กรุณากดปุ่มเข้าสู่ระบบอีกครั้ง')).catch(e=>notice(e.message))}
+// Google Sign-In ID token mode. The server must implement completeIdLogin
+// with signature/issuer/audience/expiry verification before this branch is deployed.
+let idTokenLoginInitialized=false;
+function setupIdTokenLogin(){
+ if(cfg.googleLoginMode!=='id-token'||idTokenLoginInitialized)return;
+ if(!cfg.googleClientId||!window.google?.accounts?.id){notice('ระบบ Google Login ยังไม่พร้อมใช้งาน');return}
+ idTokenLoginInitialized=true;
+ google.accounts.id.initialize({
+  client_id:cfg.googleClientId,
+  auto_select:false,
+  callback:async response=>{
+   try{
+    if(!response?.credential)throw Error('ไม่ได้รับข้อมูลยืนยันตัวตนจาก Google');
+    // Never decode or trust the credential in the browser to assign any role.
+    // The Apps Script backend must verify it and issue its own session.
+    const answer=await api('completeIdLogin',{credential:response.credential});
+    if(!answer?.session||!answer?.user)throw Error('Backend ไม่ได้ส่งข้อมูลเข้าสู่ระบบที่ถูกต้อง');
+    session=answer.session;user=answer.user;renderIdentity();notice('เข้าสู่ระบบแล้ว');
+    if($('#myCases'))await loadMyCases();
+   }catch(e){notice(e.message||'ไม่สามารถเข้าสู่ระบบได้')}
+  }
+ });
+ document.querySelectorAll('#login,.login-button').forEach(button=>{
+  if(button.dataset.googleIdReady)return;
+  button.dataset.googleIdReady='1';
+  const wrapper=make('span');wrapper.className='google-id-login';
+  button.insertAdjacentElement('afterend',wrapper);
+  google.accounts.id.renderButton(wrapper,{theme:'outline',size:'large',text:'signin_with',locale:'th'});
+  button.classList.add('hidden');
+ });
+ renderIdentity();
+}
+window.addEventListener('load',setupIdTokenLogin);
+function login(){
+ if(cfg.googleLoginMode==='id-token'){
+  setupIdTokenLogin();
+  if(!idTokenLoginInitialized)notice('รอโหลดบริการ Google Login แล้วลองอีกครั้ง');
+  return;
+ }
+ if(loginClient){loginClient.requestCode();return}
+ prepareLogin().then(()=>notice('พร้อมเข้าสู่ระบบแล้ว กรุณากดปุ่มเข้าสู่ระบบอีกครั้ง')).catch(e=>notice(e.message))
+}
 $('#login').onclick=login;document.querySelectorAll('.login-button').forEach(b=>b.onclick=login);$('#logout').onclick=async()=>{try{await api('logout')}catch{}session='';user=null;$('#myCases')?.replaceChildren();$('#caseBody')?.replaceChildren();$('#caseDialog')?.close();$('#staffCaseDialog')?.close();renderIdentity();notice('ออกจากระบบแล้ว')};document.querySelectorAll('.close-dialog').forEach(b=>b.onclick=()=>b.closest('dialog').close());
 async function uploadFiles(input){const files=[...input.files];if(files.length>3||files.some(f=>f.size>5242880))throw Error('แนบได้ไม่เกิน 3 ไฟล์ ไฟล์ละไม่เกิน 5 MB');return Promise.all(files.map(f=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve({name:f.name,base64:String(reader.result).split(',')[1]});reader.onerror=()=>reject(Error('อ่านไฟล์ไม่ได้'));reader.readAsDataURL(f)})))}
 async function openFile(id,holder,publicAsset=false){const p=await api(publicAsset?'publicFile':'file',{id});const bytes=Uint8Array.from(atob(p.base64),c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:p.mime}));if(holder&&p.mime.startsWith('image/')){const img=make('img');img.src=url;img.alt=p.name;img.className='preview';holder.append(img)}const a=make('a','ดาวน์โหลด '+p.name);a.href=url;a.download=p.name;if(holder)holder.append(a);else a.click();setTimeout(()=>URL.revokeObjectURL(url),300000)}
