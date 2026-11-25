@@ -1,6 +1,7 @@
 function uid(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20)}
 const cfg=window.APP_CONFIG,$=s=>document.querySelector(s),make=(t,s='')=>{const e=document.createElement(t);e.textContent=s;return e};
 const CATEGORIES=['อาหาร','ยา','สมุนไพร','เครื่องสำอาง','วัตถุอันตราย','เครื่องมือแพทย์','สถานพยาบาลและคลินิก','สถานประกอบการเพื่อสุขภาพ','โฆษณาผลิตภัณฑ์สุขภาพ','อื่น ๆ'];
+let intakeNoticeReady=false;
 let session='',user=null,bridgeWindow=null,bridgeOrigin='',bridgeReady=false,loginClient=null,loginState=null,loginPreparation=null;
 const pending=new Map(),channel=uid(),browserKey=uid()+uid();
 function notice(s){$('#toast').textContent=s;$('#toast').classList.add('shown');setTimeout(()=>$('#toast').classList.remove('shown'),6000)}
@@ -93,6 +94,13 @@ function bindIntakeFrame(item){
  // Standalone form pages intentionally remain read-only; only an authenticated
  // same-origin parent enables and submits them through its active session.
  if(!user){frame.src='about:blank';return}
+ if(!intakeNoticeReady){
+  const formControls=form.querySelectorAll('input,textarea,select,button');
+  formControls.forEach(el=>el.disabled=true);
+  const msg=$('#intakeMessage');if(msg)msg.textContent='ยังไม่เปิดรับข้อมูลผ่านแบบฟอร์ม กรุณารอหน่วยงานกำหนดข้อมูลติดต่อและประกาศความเป็นส่วนตัว';
+  frame.style.height=Math.max(1100,doc.documentElement.scrollHeight+48)+'px';
+  return;
+ }
  doc.querySelector('#notLive')?.remove();
  doc.querySelector('#openRealForm')?.remove();
  form.noValidate=false;
@@ -259,6 +267,8 @@ async function loadContent(){
  try{
   const r=await api('catalog');if(!r||!Array.isArray(r.items))throw Error('รายการเนื้อหาไม่ถูกต้อง');
   $('#contact').textContent=r.contact||'';if(r.privacyText)$('#privacyText').textContent=r.privacyText;
+  intakeNoticeReady=!!(String(r.contact||'').trim()&&String(r.privacyText||'').trim());
+  renderIntakeRoute();
   ['news','alert'].forEach(type=>{if(!r.sourceIssues?.includes(type))renderPublicCards(type,r.items.filter(c=>c.type===type))});
   await renderBanners(r.items.filter(c=>c.type==='banner'),r.sourceIssues?.includes('banner'));
  }catch(e){if(!slides.length)bannerStatus('โหลดแบนเนอร์ไม่สำเร็จ: '+e.message);notice(e.message)}finally{contentLoading=false}
