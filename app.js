@@ -1,6 +1,7 @@
 function uid(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20)}
 const cfg=window.APP_CONFIG,$=s=>document.querySelector(s),make=(t,s='')=>{const e=document.createElement(t);e.textContent=s;return e};
 const CATEGORIES=['อาหาร','ยา','สมุนไพร','เครื่องสำอาง','วัตถุอันตราย','เครื่องมือแพทย์','สถานพยาบาลและคลินิก','สถานประกอบการเพื่อสุขภาพ','โฆษณาผลิตภัณฑ์สุขภาพ','อื่น ๆ'];
+let intakeNoticeReady=false;
 let session='',user=null,bridgeWindow=null,bridgeOrigin='',bridgeReady=false,loginClient=null,loginState=null,loginPreparation=null;
 const pending=new Map(),channel=uid(),browserKey=uid()+uid();
 function notice(s){$('#toast').textContent=s;$('#toast').classList.add('shown');setTimeout(()=>$('#toast').classList.remove('shown'),6000)}
@@ -19,18 +20,119 @@ function selectedIntake(){
  const key=new URLSearchParams(raw).get('intake');
  return Object.prototype.hasOwnProperty.call(INTAKE_CHOICES,key)?INTAKE_CHOICES[key]:null;
 }
+const intakeRequestIds=new Map();
+let intakeSubmitting=false;
+function intakeFileBase64(file){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>resolve(String(reader.result).split(',')[1]);
+  reader.onerror=()=>reject(Error('อ่านไฟล์ '+file.name+' ไม่สำเร็จ'));
+  reader.readAsDataURL(file);
+ });
+}
+function intakeFields(form){
+ const fields={};
+ form.querySelectorAll('input,select,textarea').forEach(el=>{
+  if(el.type==='file'){if(el.id&&el.files?.length)fields[el.id]=[...el.files].map(f=>f.name).join(' | ');return;}
+  const key=(el.type==='radio'?el.name:el.id||el.name);
+  if(!key||!/^[a-zA-Z][a-zA-Z0-9_-]{0,49}$/.test(key))return;
+  if(el.type==='radio'){if(el.checked)fields[key]=el.value}
+  else if(el.type==='checkbox')fields[key]=!!el.checked;
+  else fields[key]=el.value;
+ });
+ return fields;
+}
+async function submitIntake(form,item){
+ if(intakeSubmitting||!user)return;
+ const message=$('#intakeMessage'),category=$('#intakeCategory');
+ if(!category.value){category.reportValidity();return}
+ if(!form.reportValidity())return;
+ const requiredConsent=item.path==='complaint-reward.html'?'acceptTerms':
+  item.path==='complaint-no-reward.html'?'consent':'confirm';
+ if(!form.querySelector('#'+requiredConsent)?.checked){notice('กรุณายืนยันข้อมูลและรับทราบข้อตกลงก่อน');return}
+ const files=[...form.querySelectorAll('input[type="file"]')].flatMap(e=>[...e.files]);
+ if(files.length>5||files.some(f=>!f.size||f.size>10485760)){
+  notice('แนบได้สูงสุด 5 ไฟล์ ไฟล์ละไม่เกิน 10 MB');return;
+ }
+ const fields=intakeFields(form);
+ const data={
+  requestId:intakeRequestIds.get(item.path)||uid()+uid(),
+  intakeType:Object.keys(INTAKE_CHOICES).find(k=>INTAKE_CHOICES[k].path===item.path),
+  category:category.value,subject:String(fields.subject||''),
+  details:String(fields.details||''),location:String(fields.place||fields.address||''),
+  name:String(fields.name||''),phone:String(fields.phone||''),
+  acknowledge:true,extra:fields,stagedFileIds:[]
+ };
+ intakeRequestIds.set(item.path,data.requestId);
+ const send=form.querySelector('[type="submit"]');
+ intakeSubmitting=true;if(send)send.disabled=true;
+ try{
+  for(let i=0;i<files.length;i++){
+   const file=files[i];
+   message.textContent='กำลังส่งหลักฐาน '+(i+1)+'/'+files.length+': '+file.name;
+   const staged=await api('stageEvidence',{name:file.name,base64:await intakeFileBase64(file)});
+   if(!staged?.uploadId)throw Error('Backend ไม่ได้คืนรหัสไฟล์');
+   data.stagedFileIds.push(staged.uploadId);
+  }
+  message.textContent='กำลังบันทึกเรื่องร้องเรียน…';
+  const result=await api('submit',data);
+  if(!result?.id)throw Error('ไม่พบเลขรับเรื่องจาก Backend');
+  message.replaceChildren(make('strong','รับเรื่องแล้ว เลขรับเรื่อง '+result.id));
+  const link=make('a','ติดตามสถานะคำร้อง');
+  link.href='index.html#track?case='+encodeURIComponent(result.id);
+  message.append(' ',link);
+  form.querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=true);
+  intakeRequestIds.delete(item.path);
+ }catch(error){
+  message.textContent='ยังส่งเรื่องไม่สำเร็จ: '+(error.message||'โปรดลองอีกครั้ง');
+ }finally{intakeSubmitting=false;if(send&&!(message.textContent||'').startsWith('รับเรื่องแล้ว'))send.disabled=false}
+}
+function bindIntakeFrame(item){
+ const frame=$('#intakeFormFrame'),doc=frame?.contentDocument;
+ if(!doc)return;
+ const form=doc.querySelector('form');if(!form)return;
+ // Standalone form pages intentionally remain read-only; only an authenticated
+ // same-origin parent enables and submits them through its active session.
+ if(!user){frame.src='about:blank';return}
+ if(!intakeNoticeReady){
+  const formControls=form.querySelectorAll('input,textarea,select,button');
+  formControls.forEach(el=>el.disabled=true);
+  const msg=$('#intakeMessage');if(msg)msg.textContent='ยังไม่เปิดรับข้อมูลผ่านแบบฟอร์ม กรุณารอหน่วยงานกำหนดข้อมูลติดต่อและประกาศความเป็นส่วนตัว';
+  frame.style.height=Math.max(1100,doc.documentElement.scrollHeight+48)+'px';
+  return;
+ }
+ doc.querySelector('#notLive')?.remove();
+ doc.querySelector('#openRealForm')?.remove();
+ form.noValidate=false;
+ form.querySelectorAll('input,textarea,select,button').forEach(el=>el.disabled=false);
+ form.addEventListener('submit',event=>{event.preventDefault();submitIntake(form,item).catch(e=>notice(e.message))},true);
+ frame.style.height=Math.max(1100,doc.documentElement.scrollHeight+48)+'px';
+ if(frame.contentWindow?.ResizeObserver){
+  const observer=new frame.contentWindow.ResizeObserver(()=>{
+   frame.style.height=Math.max(1100,doc.documentElement.scrollHeight+48)+'px';
+  });
+  observer.observe(doc.body);
+ }
+}
 function renderIntakeRoute(){
  const next=$('#intakeNext'),results=$('.tracking-results'),gate=$('.tracking-login');
  if(!next||!results||!gate)return;
- const item=selectedIntake();
+ const item=selectedIntake(),frame=$('#intakeFormFrame');
  next.classList.toggle('hidden',!item||!user);
  results.classList.toggle('hidden',!user||!!item);
  if(item){
   $('#intakeSelected').textContent='หัวข้อที่เลือก: '+item.label;
-  $('#intakePreview').href=item.path;
   gate.querySelector('p').textContent='กรุณาเข้าสู่ระบบด้วยบัญชี Google ก่อนดำเนินการต่อ: '+item.label;
  }else{
   gate.querySelector('p').textContent='เลือกบัญชี Gmail ที่ใช้ส่งแบบฟอร์มร้องเรียน เพื่อติดตามสถานะคำขอร้องเรียน';
+ }
+ if(!frame)return;
+ if(!item||!user){if(frame.getAttribute('src')&&frame.getAttribute('src')!=='about:blank')frame.src='about:blank';return}
+ const select=$('#intakeCategory');
+ if(!select.dataset.ready){CATEGORIES.forEach(c=>{const option=make('option',c);option.value=c;select.append(option)});select.dataset.ready='1'}
+ if(frame.getAttribute('src')!==item.path){
+  frame.onload=()=>bindIntakeFrame(item);
+  frame.src=item.path;
  }
 }
 function renderIdentity(){const signed=!!user;$('#identity').textContent=signed?user.email:'ยังไม่ได้เข้าสู่ระบบ';$('#login').classList.toggle('hidden',signed||cfg.googleLoginMode==='id-token');document.querySelectorAll('.google-id-login').forEach(e=>e.classList.toggle('hidden',signed));$('#logout').classList.toggle('hidden',!signed);document.querySelectorAll('.login-gate').forEach(e=>e.classList.toggle('hidden',signed));$('#complaintForm')?.classList.toggle('hidden',!signed);$('#refreshCases')?.classList.toggle('hidden',!signed);$('.tracking-results')?.classList.toggle('hidden',!signed);renderIntakeRoute();document.dispatchEvent(new Event('identity-changed'))}
@@ -165,6 +267,8 @@ async function loadContent(){
  try{
   const r=await api('catalog');if(!r||!Array.isArray(r.items))throw Error('รายการเนื้อหาไม่ถูกต้อง');
   $('#contact').textContent=r.contact||'';if(r.privacyText)$('#privacyText').textContent=r.privacyText;
+  intakeNoticeReady=!!(String(r.contact||'').trim()&&String(r.privacyText||'').trim());
+  renderIntakeRoute();
   ['news','alert'].forEach(type=>{if(!r.sourceIssues?.includes(type))renderPublicCards(type,r.items.filter(c=>c.type===type))});
   await renderBanners(r.items.filter(c=>c.type==='banner'),r.sourceIssues?.includes('banner'));
  }catch(e){if(!slides.length)bannerStatus('โหลดแบนเนอร์ไม่สำเร็จ: '+e.message);notice(e.message)}finally{contentLoading=false}

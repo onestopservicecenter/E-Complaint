@@ -1,4 +1,4 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข | สสจ.นครปฐม</title><link rel="preconnect" href="https://script.google.com"><link rel="dns-prefetch" href="https://script.googleusercontent.com"><link rel="stylesheet" href="styles.css?v=20261113-tracking-card-top"><script defer src="config.js?v=20261124-idtoken-test"></script><script defer src="vendor/qrcode.js"></script><script defer src="app.js?v=20261125-intake-login"></script><script src="https://accounts.google.com/gsi/client" async defer></script>
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข | สสจ.นครปฐม</title><link rel="preconnect" href="https://script.google.com"><link rel="dns-prefetch" href="https://script.googleusercontent.com"><link rel="stylesheet" href="styles.css?v=20261113-tracking-card-top"><script defer src="config.js?v=20261124-idtoken-test"></script><script defer src="vendor/qrcode.js"></script><script defer src="app.js?v=20261125-intake-staging"></script><script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* E-Complaint: selection screen isolated to the existing complaint route. */
 .complaint-choice-page{max-width:920px!important;margin:32px auto 48px!important;padding:clamp(16px,2vw,30px)!important;border:1px solid #e0e5eb!important;border-radius:18px!important;box-shadow:none!important}
@@ -119,10 +119,14 @@ a.complaint-choice-link:focus-visible{outline:3px solid #2196f3;outline-offset:3
     <div class="tracking-login-agency">สำนักงานสาธารณสุขจังหวัดนครปฐม</div>
   </div>
   <section id="intakeNext" class="panel hidden" aria-live="polite">
-    <h2>เข้าสู่ระบบสำเร็จ</h2>
+    <h2>แบบฟอร์มแจ้งข้อร้องเรียน</h2>
     <p id="intakeSelected"></p>
-    <p>แบบฟอร์มรายการนี้ยังเป็นต้นแบบที่ปิดการส่งข้อมูลไว้ระหว่างเชื่อมต่อระบบรับเรื่อง กรุณาอย่าใส่ข้อมูลส่วนบุคคลจริงในหน้าต้นแบบ</p>
-    <a id="intakePreview" class="button" href="#" rel="noopener noreferrer">ดูแบบฟอร์มต้นแบบของหัวข้อที่เลือก</a>
+    <p class="muted">กรุณาเลือกหมวดที่เกี่ยวข้องก่อนส่งเรื่อง เจ้าหน้าที่จะได้รับเรื่องตามสิทธิ์ที่หน่วยงานกำหนด</p>
+    <label for="intakeCategory">หมวดงานที่เกี่ยวข้อง *</label>
+    <select id="intakeCategory" required><option value="">— เลือกหมวด —</option></select>
+    <p class="muted">ข้อมูลส่วนบุคคลและไฟล์หลักฐานจะถูกส่งเฉพาะเมื่อประกาศความเป็นส่วนตัวและช่องทางติดต่อของหน่วยงานพร้อมใช้งาน</p>
+    <iframe id="intakeFormFrame" title="แบบฟอร์มแจ้งข้อร้องเรียน" style="display:block;width:100%;min-height:1100px;border:0" referrerpolicy="no-referrer"></iframe>
+    <output id="intakeMessage" aria-live="polite"></output>
   </section>
   <div class="tracking-results hidden">
     <div class="section-heading">
