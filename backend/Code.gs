@@ -130,7 +130,7 @@ function privateFolder_(folder){
  return folder;
 }
 function caseFolder_(caseId,intakeType,ownerEmail){
- if(!/^NPT-\\d{8}-[A-F0-9]{12}$/.test(caseId))throw Error('เลขรับเรื่องไม่ถูกต้อง');
+ if(!/^NPT-\d{8}-[A-F0-9]{12}$/.test(caseId))throw Error('เลขรับเรื่องไม่ถูกต้อง');
  const date=caseId.slice(4,8)+'-'+caseId.slice(8,10)+'-'+caseId.slice(10,12);
  // Historical cases stay where they were stored. Never relocate old files.
  const oldRoot=privateFolder_(DriveApp.getFolderById(cfg_().folders.evidence));
