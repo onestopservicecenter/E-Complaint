@@ -288,7 +288,7 @@ function filePayload_(id,thumbnail=false,maxBytes=5242880){
   blob=f.getBlob();
  }
  const mime=blob.getContentType();
- if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(mime)||thumbnail&&!mime.startsWith('image/'))throw Error('ชนิดไฟล์ไม่ถูกต้อง');
+ if(!['image/jpeg','image/png','image/webp','application/pdf','audio/mpeg','audio/wav','audio/ogg','video/mp4'].includes(mime)||thumbnail&&!mime.startsWith('image/'))throw Error('ชนิดไฟล์ไม่ถูกต้อง');
  const bytes=blob.getBytes();
  if(!bytes.length||bytes.length>(thumbnail?5242880:maxBytes))throw Error('ไฟล์เกินขนาดที่ระบบรองรับหรือไฟล์ว่าง');
  return {name:f.getName(),mime,base64:Utilities.base64Encode(bytes)};
