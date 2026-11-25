@@ -179,6 +179,7 @@ function validateIntakeFile_(d){
  return {name,mime,bytes};
 }
 function stageEvidence_(u,d){
+ if(!cfg_().privacyText||!cfg_().contact)throw Error('ยังไม่เปิดรับหลักฐาน กรุณารอข้อมูลติดต่อและประกาศความเป็นส่วนตัวของหน่วยงาน');
  const f=validateIntakeFile_(d),uploadId=random_();
  const saved=stagedFolder_().createFile(Utilities.newBlob(f.bytes,f.mime,uploadId));
  prop_().setProperty('intakeFile:'+uploadId,JSON.stringify({ownerSub:u.sub,fileId:saved.getId(),name:f.name,mime:f.mime,size:f.bytes.length,createdAt:Date.now()}));
