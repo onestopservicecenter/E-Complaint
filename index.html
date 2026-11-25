@@ -1,4 +1,4 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข | สสจ.นครปฐม</title><link rel="preconnect" href="https://script.google.com"><link rel="dns-prefetch" href="https://script.googleusercontent.com"><link rel="stylesheet" href="styles.css?v=20261113-tracking-card-top"><script defer src="config.js?v=20261124-idtoken-test"></script><script defer src="vendor/qrcode.js"></script><script defer src="app.js?v=20261124-idtoken-test"></script><script src="https://accounts.google.com/gsi/client" async defer></script>
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>กลุ่มงานคุ้มครองผู้บริโภคและเภสัชสาธารณสุข | สสจ.นครปฐม</title><link rel="preconnect" href="https://script.google.com"><link rel="dns-prefetch" href="https://script.googleusercontent.com"><link rel="stylesheet" href="styles.css?v=20261113-tracking-card-top"><script defer src="config.js?v=20261124-idtoken-test"></script><script defer src="vendor/qrcode.js"></script><script defer src="app.js?v=20261125-intake-login"></script><script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* E-Complaint: selection screen isolated to the existing complaint route. */
 .complaint-choice-page{max-width:920px!important;margin:32px auto 48px!important;padding:clamp(16px,2vw,30px)!important;border:1px solid #e0e5eb!important;border-radius:18px!important;box-shadow:none!important}
@@ -91,18 +91,18 @@ a.complaint-choice-link:focus-visible{outline:3px solid #2196f3;outline-offset:3
         <h3>1 ร้องเรียน</h3>
         <p>ร้องเรียนผลิตภัณฑ์สุขภาพ/สถานประกอบการ</p>
         <div class="complaint-subcard-list">
-          <a class="complaint-subcard" href="complaint-reward.html" target="_blank" rel="noopener noreferrer">ประสงค์ขอรับเงินสินบนนำจับ</a>
-          <a class="complaint-subcard" href="complaint-no-reward.html" target="_blank" rel="noopener noreferrer">ไม่ประสงค์ขอรับเงินสินบนนำจับ</a>
+          <a class="complaint-subcard" href="index.html#track?intake=reward" target="_blank" rel="noopener noreferrer">ประสงค์ขอรับเงินสินบนนำจับ</a>
+          <a class="complaint-subcard" href="index.html#track?intake=no-reward" target="_blank" rel="noopener noreferrer">ไม่ประสงค์ขอรับเงินสินบนนำจับ</a>
         </div>
       </div>
     </article>
-    <a class="complaint-choice-card complaint-choice-link" href="complaint-inspection.html" target="_blank" rel="noopener noreferrer">
+    <a class="complaint-choice-card complaint-choice-link" href="index.html#track?intake=inspection" target="_blank" rel="noopener noreferrer">
       <div class="complaint-choice-icon surveillance-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></div>
       <div class="complaint-choice-content">
         <h3>2 แจ้งตรวจสอบมาตรฐานผลิตภัณฑ์/สถานประกอบการ</h3>
       </div>
     </a>
-    <a class="complaint-choice-card complaint-choice-link" href="complaint-ossc.html" target="_blank" rel="noopener noreferrer">
+    <a class="complaint-choice-card complaint-choice-link" href="index.html#track?intake=ossc" target="_blank" rel="noopener noreferrer">
       <div class="complaint-choice-icon service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 16a5 5 0 0 1-5 5h-3"/><rect x="2" y="13" width="4" height="6" rx="2"/><rect x="18" y="13" width="4" height="6" rx="2"/></svg></div>
       <div class="complaint-choice-content">
         <h3>3 ร้องเรียนการบริการ OSSC</h3>
@@ -118,6 +118,12 @@ a.complaint-choice-link:focus-visible{outline:3px solid #2196f3;outline-offset:3
     <button type="button" class="login-button">เข้าสู่ระบบ ด้วย Mail</button>
     <div class="tracking-login-agency">สำนักงานสาธารณสุขจังหวัดนครปฐม</div>
   </div>
+  <section id="intakeNext" class="panel hidden" aria-live="polite">
+    <h2>เข้าสู่ระบบสำเร็จ</h2>
+    <p id="intakeSelected"></p>
+    <p>แบบฟอร์มรายการนี้ยังเป็นต้นแบบที่ปิดการส่งข้อมูลไว้ระหว่างเชื่อมต่อระบบรับเรื่อง กรุณาอย่าใส่ข้อมูลส่วนบุคคลจริงในหน้าต้นแบบ</p>
+    <a id="intakePreview" class="button" href="#" rel="noopener noreferrer">ดูแบบฟอร์มต้นแบบของหัวข้อที่เลือก</a>
+  </section>
   <div class="tracking-results hidden">
     <div class="section-heading">
       <h2>ระบบติดตามสถานะคำขอร้องเรียน</h2>
