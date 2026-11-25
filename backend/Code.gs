@@ -59,7 +59,14 @@ function beginLogin_(d){
  const key=text_(d.browserKey,150,30),state=random_(),stateKey=hash_(state),keyHash=hash_(key);
  CacheService.getScriptCache().put('oauth:'+stateKey,keyHash,900);
  // Script Cache is best-effort; persist the short-lived nonce to avoid false expirations.
- prop_().setProperty('idnonce:'+stateKey,JSON.stringify({keyHash,createdAt:Date.now()}));
+ const properties=prop_(),now=Date.now();
+ // Remove abandoned login challenges; do not touch CONFIG_V2 or other properties.
+ for(const [name,value] of Object.entries(properties.getProperties())){
+  if(!name.startsWith('idnonce:'))continue;
+  try{if(now-JSON.parse(value).createdAt>900000)properties.deleteProperty(name)}
+  catch(_){properties.deleteProperty(name)}
+ }
+ properties.setProperty('idnonce:'+stateKey,JSON.stringify({keyHash,createdAt:now}));
  return {state};
 }
 function completeLogin_(d){const state=text_(d.state,100,30),key=text_(d.browserKey,150,30),code=text_(d.code,3000,1),cache=CacheService.getScriptCache();const cacheKey='oauth:'+hash_(state);if(cache.get(cacheKey)!==hash_(key))throw Error('คำขอเข้าสู่ระบบหมดอายุ กรุณาลองใหม่');cache.remove(cacheKey);const p=prop_();const token=jsonFetch_('https://oauth2.googleapis.com/token',{method:'post',payload:{code,client_id:p.getProperty('GOOGLE_CLIENT_ID'),client_secret:p.getProperty('GOOGLE_CLIENT_SECRET'),redirect_uri:siteOrigin_(),grant_type:'authorization_code'}});const identity=jsonFetch_('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:'Bearer '+token.access_token}});if(!identity.sub||!identity.email||identity.email_verified!==true)throw Error('บัญชี Google ยังไม่ยืนยันอีเมล');if(!identity.email.toLowerCase().endsWith('@gmail.com')&&!identity.hd)throw Error('รองรับบัญชี Gmail หรือ Google Workspace ที่ยืนยันแล้ว');const secret=random_(),u={sub:identity.sub,email:identity.email.toLowerCase(),name:identity.name||identity.email};add_('Sessions',{hash:hash_(secret),sub:u.sub,email:u.email,name:u.name,expiresAt:new Date(Date.now()+3600000).toISOString()});audit_(u,'login','');return {session:secret,user:publicUser_(u)}}
