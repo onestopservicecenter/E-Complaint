@@ -125,7 +125,88 @@ function caseFolder_(caseId){
  return folder;
 }
 function storeFiles_(checked,module,caseId){const created=[];try{checked.forEach(x=>{const f=(caseId?caseFolder_(caseId):DriveApp.getFolderById(CONTENT_FOLDERS_[module]||cfg_().folders[module])).createFile(Utilities.newBlob(x.bytes,x.mime,x.name));created.push({id:f.getId(),name:x.name,mime:x.mime})});return created}catch(e){trash_(created);throw Error('บันทึกไฟล์ไม่ได้')}}function trash_(a){a.forEach(f=>{try{DriveApp.getFileById(f.id).setTrashed(true)}catch(e){}})}
-function submit_(u,d){if(!cfg_().privacyText||!cfg_().contact)throw Error('หน่วยงานยังไม่ได้เปิดรับเรื่อง กรุณารอการตั้งค่าข้อมูลติดต่อและประกาศความเป็นส่วนตัว');const requestId=text_(d.requestId,80,16),old=rows_('Cases').find(c=>c.requestId===requestId&&c.ownerSub===u.sub);if(old)return {id:old.id};if(rows_('Cases').filter(c=>c.ownerSub===u.sub&&thaiDay_(c.at)===thaiDay_(now_())).length>=10)throw Error('ส่งได้ไม่เกิน 10 เรื่องต่อวัน');const category=text_(d.category,100,1);if(!CATS_.includes(category)||d.acknowledge!==true)throw Error('ข้อมูลหมวดหรือการรับทราบไม่ถูกต้อง');const subject=text_(d.subject,200,1),details=text_(d.details,10000,20),location=text_(d.location,500,1),name=text_(d.name,120,1),phone=text_(d.phone,25,8);if(!/^[0-9+() -]{8,25}$/.test(phone))throw Error('โทรศัพท์ไม่ถูกต้อง');const checked=checkedFiles_(d.files||[]);const id='NPT-'+Utilities.formatDate(new Date(),'Asia/Bangkok','yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,12).toUpperCase();caseFolder_(id);const created=storeFiles_(checked,'evidence',id);let committed=false;try{add_('Cases',{id,requestId,ownerSub:u.sub,email:u.email,category,subject,details,location,name,phone,evidence:JSON.stringify(created),at:now_(),deleted:false});committed=true;add_('Updates',{id:Utilities.getUuid(),caseId:id,at:now_(),status:STATUSES_[0],note:'รับเรื่องแล้ว รอเจ้าหน้าที่ตรวจสอบ',internal:'',files:'[]',actor:'system',requestId:'intake-'+requestId});audit_(u,'submit',id);return {id}}catch(e){if(!committed)trash_(created);throw Error(committed?'ระบบรับข้อมูลแล้ว โปรดตรวจรายการก่อนส่งซ้ำ':'บันทึกไม่สำเร็จ')}}
+
+const INTAKE_TYPES_=['reward','no-reward','inspection','ossc'];
+function intakeExtra_(d){
+ if(!INTAKE_TYPES_.includes(d.intakeType))throw Error('ประเภทแบบฟอร์มไม่ถูกต้อง');
+ if(!d.extra||typeof d.extra!=='object'||Array.isArray(d.extra))throw Error('ไม่มีข้อมูลแบบฟอร์ม');
+ const result={};
+ const entries=Object.entries(d.extra);
+ if(entries.length>80)throw Error('มีช่องข้อมูลมากเกินไป');
+ entries.forEach(([key,value])=>{
+  if(!/^[a-zA-Z][a-zA-Z0-9_-]{0,49}$/.test(key)||!['string','boolean','number'].includes(typeof value))throw Error('ช่องข้อมูลไม่ถูกต้อง');
+  result[key]=text_(String(value),3000);
+ });
+ if(JSON.stringify(result).length>40000)throw Error('รายละเอียดแบบฟอร์มเกินขนาด');
+ return result;
+}
+function intakeDetailsSheet_(){
+ const ss=db_();
+ let sh=ss.getSheetByName('NPT2_CaseDetails');
+ if(!sh){
+  sh=ss.insertSheet('NPT2_CaseDetails');
+  sh.appendRow(['caseId','intakeType','fieldsJson','at']);
+  sh.setFrozenRows(1);
+ }
+ const headers=sh.getRange(1,1,1,4).getValues()[0];
+ if(['caseId','intakeType','fieldsJson','at'].some((k,i)=>headers[i]!==k))throw Error('ตารางรายละเอียดไม่ตรง');
+ return sh;
+}
+function stagedFolder_(){
+ const root=DriveApp.getFolderById(cfg_().folders.evidence);
+ if(root.getSharingAccess()!==DriveApp.Access.PRIVATE)throw Error('พื้นที่หลักฐานต้องเป็นส่วนตัว');
+ const folders=root.getFoldersByName('_pending_intake');
+ const folder=folders.hasNext()?folders.next():root.createFolder('_pending_intake');
+ if(folder.getSharingAccess()!==DriveApp.Access.PRIVATE)throw Error('พื้นที่พักไฟล์ต้องเป็นส่วนตัว');
+ return folder;
+}
+function validateIntakeFile_(d){
+ const name=text_(d.name,180,1),base64=text_(d.base64,14000000,1);
+ let bytes;
+ try{bytes=Utilities.base64Decode(base64)}catch(_){throw Error('ข้อมูลไฟล์ไม่ถูกต้อง')}
+ if(!bytes.length||bytes.length>10485760)throw Error('แนบได้สูงสุดไฟล์ละ 10 MB');
+ const b=i=>(bytes[i]+256)%256;
+ let mime='';
+ if(b(0)===255&&b(1)===216&&b(2)===255)mime='image/jpeg';
+ else if([137,80,78,71,13,10,26,10].every((v,i)=>b(i)===v))mime='image/png';
+ else if([37,80,68,70,45].every((v,i)=>b(i)===v))mime='application/pdf';
+ else if([82,73,70,70].every((v,i)=>b(i)===v)&&[87,69,66,80].every((v,i)=>b(i+8)===v))mime='image/webp';
+ else if([82,73,70,70].every((v,i)=>b(i)===v)&&[87,65,86,69].every((v,i)=>b(i+8)===v))mime='audio/wav';
+ else if([79,103,103,83].every((v,i)=>b(i)===v))mime='audio/ogg';
+ else if([73,68,51].every((v,i)=>b(i)===v)||(b(0)===255&&(b(1)&224)===224))mime='audio/mpeg';
+ else if([102,116,121,112].every((v,i)=>b(i+4)===v))mime='video/mp4';
+ if(!mime)throw Error('ชนิดไฟล์ไม่รองรับ');
+ return {name,mime,bytes};
+}
+function stageEvidence_(u,d){
+ const f=validateIntakeFile_(d),uploadId=random_();
+ const saved=stagedFolder_().createFile(Utilities.newBlob(f.bytes,f.mime,uploadId));
+ prop_().setProperty('intakeFile:'+uploadId,JSON.stringify({ownerSub:u.sub,fileId:saved.getId(),name:f.name,mime:f.mime,size:f.bytes.length,createdAt:Date.now()}));
+ audit_(u,'stage-file',uploadId);
+ return {uploadId,name:f.name,size:f.bytes.length};
+}
+function finalizeStagedFiles_(u,ids,caseId){
+ if(!Array.isArray(ids)||ids.length>5||new Set(ids).size!==ids.length)throw Error('แนบได้ไม่เกิน 5 ไฟล์');
+ const properties=prop_(),now=Date.now(),all=ids.map(id=>{
+  if(typeof id!=='string'||!/^[a-f0-9]{64}$/i.test(id))throw Error('รหัสไฟล์ไม่ถูกต้อง');
+  const value=properties.getProperty('intakeFile:'+id);
+  if(!value)throw Error('ไฟล์หมดอายุ กรุณาแนบใหม่');
+  const metadata=JSON.parse(value);
+  if(metadata.ownerSub!==u.sub||now-metadata.createdAt>3600000||metadata.createdAt>now+60000)throw Error('ไม่มีสิทธิ์ใช้ไฟล์หรือไฟล์หมดอายุ');
+  return {id,metadata};
+ });
+ const target=caseFolder_(caseId),moved=[];
+ all.forEach(({id,metadata})=>{
+  const file=DriveApp.getFileById(metadata.fileId);
+  if(file.isTrashed()||file.getSize()!==metadata.size||file.getMimeType()!==metadata.mime)throw Error('ไฟล์หลักฐานไม่ถูกต้อง');
+  file.moveTo(target);
+  file.setName(metadata.name);
+  properties.deleteProperty('intakeFile:'+id);
+  moved.push({id:file.getId(),name:metadata.name,mime:metadata.mime});
+ });
+ return moved;
+}
+function submit_(u,d){if(!cfg_().privacyText||!cfg_().contact)throw Error('หน่วยงานยังไม่ได้เปิดรับเรื่อง กรุณารอการตั้งค่าข้อมูลติดต่อและประกาศความเป็นส่วนตัว');const requestId=text_(d.requestId,80,16),old=rows_('Cases').find(c=>c.requestId===requestId&&c.ownerSub===u.sub);if(old)return {id:old.id};if(rows_('Cases').filter(c=>c.ownerSub===u.sub&&thaiDay_(c.at)===thaiDay_(now_())).length>=10)throw Error('ส่งได้ไม่เกิน 10 เรื่องต่อวัน');const category=text_(d.category,100,1);if(!CATS_.includes(category)||d.acknowledge!==true)throw Error('ข้อมูลหมวดหรือการรับทราบไม่ถูกต้อง');const subject=text_(d.subject,200,1),details=text_(d.details,10000,20),location=text_(d.location,500,1),name=text_(d.name,120,1),phone=text_(d.phone,25,8);if(!/^[0-9+() -]{8,25}$/.test(phone))throw Error('โทรศัพท์ไม่ถูกต้อง');const extra=intakeExtra_(d),staged=Array.isArray(d.stagedFileIds)?d.stagedFileIds:null;const checked=staged?[]:checkedFiles_(d.files||[]);const id='NPT-'+Utilities.formatDate(new Date(),'Asia/Bangkok','yyyyMMdd')+'-'+Utilities.getUuid().replace(/-/g,'').slice(0,12).toUpperCase();caseFolder_(id);const created=staged?finalizeStagedFiles_(u,staged,id):storeFiles_(checked,'evidence',id);let committed=false;try{add_('Cases',{id,requestId,ownerSub:u.sub,email:u.email,category,subject,details,location,name,phone,evidence:JSON.stringify(created),at:now_(),deleted:false});committed=true;intakeDetailsSheet_().appendRow([safe_(id),safe_(d.intakeType),safe_(JSON.stringify(extra)),now_()]);add_('Updates',{id:Utilities.getUuid(),caseId:id,at:now_(),status:STATUSES_[0],note:'รับเรื่องแล้ว รอเจ้าหน้าที่ตรวจสอบ',internal:'',files:'[]',actor:'system',requestId:'intake-'+requestId});audit_(u,'submit',id);return {id}}catch(e){if(!committed)trash_(created);throw Error(committed?'ระบบรับข้อมูลแล้ว โปรดตรวจรายการก่อนส่งซ้ำ':'บันทึกไม่สำเร็จ')}}
 function reply_(u,d){const c=case_(d.id);permit_(u,'cases','view',c.category);const rights=u.role==='admin'?{edit:true,upload:true,addLink:true}:(u.permissions.cases?.[c.category]||{});if(!rights.edit&&!rights.upload&&!rights.addLink)throw Error('ไม่มีสิทธิ์ตอบกลับ');const requestId=text_(d.requestId,80,16);const duplicate=rows_('Updates').find(x=>x.requestId===requestId);if(duplicate){if(duplicate.caseId!==c.id)throw Error('คำขอซ้ำผิดเรื่อง');return {ok:true}}const status=text_(d.status,60,1),note=text_(d.note,3000,1),internal=text_(d.internal||'',3000);if(!STATUSES_.includes(status))throw Error('สถานะไม่ถูกต้อง');if(!rights.edit&&(status!==status_(c.id)||internal))throw Error('ไม่มีสิทธิ์แก้สถานะหรือบันทึกภายใน');if((d.files||[]).length&&!rights.upload)throw Error('ไม่มีสิทธิ์อัปโหลด');const links=Array.isArray(d.links)?d.links:[];if(links.length>5)throw Error('แนบลิงก์ได้ไม่เกิน 5 ลิงก์');const checkedLinks=links.map(x=>({title:text_(x.title,200,1),url:validUrl_(x.url)}));if(checkedLinks.length&&!rights.addLink)throw Error('ไม่มีสิทธิ์เพิ่มลิงก์');if(!rights.edit&&!(d.files||[]).length&&!checkedLinks.length)throw Error('กรุณาแนบไฟล์หรือลิงก์ตามสิทธิ์');const created=storeFiles_(checkedFiles_(d.files||[]),'reply',c.id);let committed=false;try{add_('Updates',{id:Utilities.getUuid(),caseId:c.id,at:now_(),status,note,internal,files:JSON.stringify(created),links:JSON.stringify(checkedLinks),actor:u.email,requestId});committed=true;audit_(u,'reply',c.id);return {ok:true}}catch(e){if(!committed)trash_(created);throw Error(committed?'บันทึกผลแล้ว กรุณารีเฟรชตรวจสอบ':'บันทึกไม่สำเร็จ')}}
 
 function sourceStates_(){const sh=db_().getSheetByName('NPT2_SourceState');if(!sh||sh.getLastRow()<2)return [];return sh.getRange(2,1,sh.getLastRow()-1,3).getValues().map(r=>({fileId:r[0],state:r[1],at:r[2]}));}
@@ -200,10 +281,11 @@ function api(r){if(!r||typeof r.action!=='string')throw Error('คำขอไ�
  const u=auth_(r.session);
  if(a==='me')return u;
  if(a==='logout')return lock_(()=>{const s=rows_('Sessions').find(s=>s.hash===hash_(r.session));if(s)replace_('Sessions',s._row,{...s,expiresAt:'1970-01-01T00:00:00Z'});return {ok:true}});
+ if(a==='stageEvidence')return lock_(()=>stageEvidence_(u,d));
  if(a==='submit')return lock_(()=>submit_(u,d));
  if(a==='myCases')return rows_('Cases').filter(c=>c.ownerSub===u.sub&&!bool_(c.deleted)).reverse().map(c=>({id:c.id,subject:c.subject,status:status_(c.id),at:c.at}));
  if(a==='case')return viewCase_(u,d.id);
- if(a==='file'){allowedFile_(u,d.id);return filePayload_(d.id)}
+ if(a==='file'){allowedFile_(u,d.id);return filePayload_(d.id,false,10485760)}
  if(a==='staffCases'){const category=text_(d.category,100,1);if(!CATS_.includes(category))throw Error('เลือกหมวดก่อน');permit_(u,'cases','view',category);const search=String(d.search||'').toLowerCase().slice(0,200),page=Math.max(1,Math.floor(Number(d.page)||1));const all=rows_('Cases').filter(c=>!bool_(c.deleted)&&c.category===category&&(!search||[c.id,c.subject].some(v=>String(v).toLowerCase().includes(search)))).reverse();audit_(u,'staff-list',category);return {items:all.slice((page-1)*20,page*20).map(c=>({id:c.id,subject:c.subject,status:status_(c.id)})),more:page*20<all.length}}
  if(a==='staffCase')return viewCase_(u,d.id,true);
  if(a==='reply')return lock_(()=>reply_(u,d));
