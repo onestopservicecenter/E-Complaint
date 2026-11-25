@@ -180,7 +180,7 @@ if ($('#complaint')) {
   setInterval(() => { if (!document.hidden) showSlide(slideIndex + 1); }, 7000);
   $('#refreshCases').onclick = loadMyCases;
 }
-document.addEventListener('service-ready',()=>{loadContent();prepareLogin().catch(()=>{})});setTimeout(()=>{if(!bridgeReady&&!slides.length&&$('#bannerStatus'))$('#bannerStatus').textContent='ยังเชื่อมต่อบริการแบนเนอร์ไม่ได้ กรุณาลองใหม่ภายหลัง'},20000);setInterval(()=>{if(bridgeReady&&!document.hidden&&$('#newsCards'))loadContent()},60000);const url=endpoint();if(url){url.searchParams.set('channel',channel);$('#bridge').src=url.href}else{setTimeout(()=>notice('ระบบอยู่ระหว่างการตั้งค่า การเข้าสู่ระบบและรับเรื่องยังไม่เปิดใช้งาน'),500)}
+document.addEventListener('service-ready',()=>{loadContent();if(cfg.googleLoginMode!=='id-token')prepareLogin().catch(()=>{})});setTimeout(()=>{if(!bridgeReady&&!slides.length&&$('#bannerStatus'))$('#bannerStatus').textContent='ยังเชื่อมต่อบริการแบนเนอร์ไม่ได้ กรุณาลองใหม่ภายหลัง'},20000);setInterval(()=>{if(bridgeReady&&!document.hidden&&$('#newsCards'))loadContent()},60000);const url=endpoint();if(url){url.searchParams.set('channel',channel);$('#bridge').src=url.href}else{setTimeout(()=>notice('ระบบอยู่ระหว่างการตั้งค่า การเข้าสู่ระบบและรับเรื่องยังไม่เปิดใช้งาน'),500)}
 
 if($('#menuToggle')){$('#menuToggle').onclick=()=>{const expanded=$('#menuToggle').getAttribute('aria-expanded')==='true';$('#menuToggle').setAttribute('aria-expanded',String(!expanded));$('#mainNav').classList.toggle('menu-open',!expanded)};$('#mainNav').querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{$('#mainNav').classList.remove('menu-open');$('#menuToggle').setAttribute('aria-expanded','false')}))}
 
