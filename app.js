@@ -32,7 +32,7 @@ function intakeFileBase64(file){
 function intakeFields(form){
  const fields={};
  form.querySelectorAll('input,select,textarea').forEach(el=>{
-  if(el.type==='file')return;
+  if(el.type==='file'){if(el.id&&el.files?.length)fields[el.id]=[...el.files].map(f=>f.name).join(' | ');return;}
   const key=(el.type==='radio'?el.name:el.id||el.name);
   if(!key||!/^[a-zA-Z][a-zA-Z0-9_-]{0,49}$/.test(key))return;
   if(el.type==='radio'){if(el.checked)fields[key]=el.value}
