@@ -1,6 +1,6 @@
 function uid(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20)}
 const cfg=window.APP_CONFIG,$=s=>document.querySelector(s),make=(t,s='')=>{const e=document.createElement(t);e.textContent=s;return e};
-const CATEGORIES=['อาหาร','ยา','สมุนไพร','เครื่องสำอาง','วัตถุอันตราย','เครื่องมือแพทย์','สถานพยาบาลและคลินิก','สถานประกอบการเพื่อสุขภาพ','โฆษณาผลิตภัณฑ์สุขภาพ','อื่น ๆ'];
+const INTAKE_LABELS={reward:'ประสงค์ขอรับเงินสินบนนำจับ','no-reward':'ไม่ประสงค์ขอรับเงินสินบนนำจับ',inspection:'แจ้งตรวจสอบมาตรฐานผลิตภัณฑ์/สถานประกอบการ',ossc:'ร้องเรียนการบริการ OSSC'};
 let intakeNoticeReady=false;
 let session='',user=null,bridgeWindow=null,bridgeOrigin='',bridgeReady=false,loginClient=null,loginState=null,loginPreparation=null;
 const pending=new Map(),channel=uid(),browserKey=uid()+uid();
@@ -44,8 +44,7 @@ function intakeFields(form){
 }
 async function submitIntake(form,item){
  if(intakeSubmitting||!user)return;
- const message=$('#intakeMessage'),category=$('#intakeCategory');
- if(!category.value){category.reportValidity();return}
+ const message=$('#intakeMessage');
  if(!form.reportValidity())return;
  const requiredConsent=item.path==='complaint-reward.html'?'acceptTerms':
   item.path==='complaint-no-reward.html'?'consent':'confirm';
@@ -58,7 +57,7 @@ async function submitIntake(form,item){
  const data={
   requestId:intakeRequestIds.get(item.path)||uid()+uid(),
   intakeType:Object.keys(INTAKE_CHOICES).find(k=>INTAKE_CHOICES[k].path===item.path),
-  category:category.value,subject:String(fields.subject||''),
+  subject:String(fields.subject||''),
   details:String(fields.details||''),location:String(fields.place||fields.address||''),
   name:String(fields.name||''),phone:String(fields.phone||''),
   acknowledge:true,extra:fields,stagedFileIds:[]
@@ -128,8 +127,6 @@ function renderIntakeRoute(){
  }
  if(!frame)return;
  if(!item||!user){if(frame.getAttribute('src')&&frame.getAttribute('src')!=='about:blank')frame.src='about:blank';return}
- const select=$('#intakeCategory');
- if(!select.dataset.ready){CATEGORIES.forEach(c=>{const option=make('option',c);option.value=c;select.append(option)});select.dataset.ready='1'}
  if(frame.getAttribute('src')!==item.path){
   frame.onload=()=>bindIntakeFrame(item);
   frame.src=item.path;
